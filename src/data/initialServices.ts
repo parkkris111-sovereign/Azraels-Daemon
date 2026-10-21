@@ -131,4 +131,15 @@ export const INITIAL_CONNECTED_SERVICES: ConnectedService[] = [
       { id: 'backup_to_dropbox', name: 'Sync Final Deliverable to Dropbox', description: 'Creates a dated snapshot backup of the completed artifact.' },
     ],
   },
+  {
+    id: 'notebooklm',
+    name: 'NotebookLM Source',
+    category: 'notebook',
+    connected: true,
+    activeAccountInfo: 'Source Notebooks linked',
+    iconName: 'BookOpen',
+    supportedActions: [
+      { id: 'sync_notebook_lm_sources', name: 'Sync NotebookLM Sources', description: 'Ingests source documents and synthesized summaries from linked NotebookLM projects.' },
+    ],
+  },
 ];

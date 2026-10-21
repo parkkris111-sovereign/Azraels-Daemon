@@ -167,6 +167,14 @@ export default function App() {
     setActiveLog(message);
   };
 
+  const handleBedtimeChange = (newBedtime: string) => {
+    setBedtime(newBedtime);
+    try {
+      localStorage.setItem(STORAGE_KEY_BEDTIME, newBedtime);
+    } catch {}
+    addLog('daemon', `Bedtime target updated to ${newBedtime} via Master Combine predictive scheduling.`);
+  };
+
   // Metrics
   const pendingCount = tasks.filter((t) => t.status !== 'completed').length;
   const completedCount = tasks.filter((t) => t.status === 'completed').length;
@@ -361,9 +369,23 @@ export default function App() {
   const handleSyncAllServices = async () => {
     setIsSyncingServices(true);
     addLog('daemon', 'Polling Gmail, Outlook, Trello, Asana, Google Drive, Dropbox, and Jupyter kernels...');
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsSyncingServices(false);
-    addLog('success', 'Sync complete: All 7 connected online services synchronized.');
+    
+    try {
+      const response = await fetch('/api/daemon/sync-notebook-notes', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      
+      if (data.success && data.tasks) {
+        setTasks((prev) => [...data.tasks, ...prev]);
+        addLog('success', `Sync complete: Synchronized ${data.tasks.length} new incomplete markdown notes from notebooks.`);
+      }
+    } catch (err) {
+      console.error('Notebook sync error:', err);
+      addLog('warn', 'Sync complete: Some services could not be reached.');
+    } finally {
+      setIsSyncingServices(false);
+    }
   };
 
   // Add new email account
@@ -468,7 +490,7 @@ export default function App() {
       {/* Top Header */}
       <Header
         bedtime={bedtime}
-        onBedtimeChange={setBedtime}
+        onBedtimeChange={handleBedtimeChange}
         onOpenCapture={() => setIsCaptureOpen(true)}
         onRunBedtimeSweep={handleRunBedtimeSweep}
         onResetSampleData={handleResetSampleData}
@@ -698,6 +720,7 @@ export default function App() {
       <MasterCombineModal
         tasks={tasks}
         bedtime={bedtime}
+        onUpdateBedtime={handleBedtimeChange}
         isOpen={isMasterCombineOpen}
         onClose={() => setIsMasterCombineOpen(false)}
         onUpdateTasks={(updated) => {

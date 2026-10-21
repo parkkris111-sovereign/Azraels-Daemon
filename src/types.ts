@@ -18,7 +18,8 @@ export type OnlineServiceId =
   | 'google_drive' 
   | 'dropbox' 
   | 'jupyter' 
-  | 'notion';
+  | 'notion'
+  | 'notebooklm';
 
 export interface UserEmailAccount {
   id: string;
@@ -241,4 +242,41 @@ export interface DailySummaryReport {
   productivityTrends: ProductivityTrendItem[];
   categoryBreakdown: CategoryBreakdownInsight[];
   tomorrowFocusRecommendations: string[];
+}
+
+export type WorkloadIntensityTier = 'restorative' | 'moderate' | 'intensive' | 'critical';
+export type PredictivePacingMode = 'turbo' | 'balanced' | 'supervised';
+
+export interface PredictiveBedtimeRecommendation {
+  suggestedBedtime: string; // e.g. "23:15"
+  originalBedtime: string; // e.g. "23:00"
+  differenceMinutes: number; // e.g. +15 or -30
+  windDownStartTime: string; // e.g. "22:30"
+  windDownMinutes: number; // e.g. 45
+  
+  // Workload Intensity Metrics
+  workloadIntensityScore: number; // 0 - 100
+  intensityTier: WorkloadIntensityTier;
+  intensityTierLabel: string; // e.g. "Restorative Light", "Balanced Moderate", "Intensive High Load", "Surge Critical"
+  totalPendingCount: number;
+  residualGapPoints: number; // sum of (100 - progress)
+  estimatedResolutionTimeMinutes: number; // loop closure duration
+  cognitiveFatigueRisk: number; // 0 - 100%
+  projectedPeaceScore: number; // 0 - 100%
+  
+  // Historical Pattern Analysis
+  historicalVelocity: {
+    avgTasksPerDay: number;
+    avgMinutesPerTaskClosure: number;
+    sevenDayCompletionRatePct: number;
+    circadianOptimalBedtime: string;
+    delayFrequencyPct: number;
+  };
+  
+  // Rationale & Scientific Circadian Guidance
+  confidenceScore: number; // 0 - 100%
+  headline: string;
+  rationalePoints: string[];
+  arcOfChangeRecommendations: string[];
+  modeUsed?: 'ai' | 'deterministic';
 }

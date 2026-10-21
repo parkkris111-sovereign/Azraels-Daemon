@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   X, 
   Sparkles, 
@@ -20,11 +20,15 @@ import {
   TrendingDown,
   FileCheck,
   Flame,
-  Check
+  Check,
+  Sliders,
+  Bed
 } from 'lucide-react';
 import { IncompleteTask, MasterCombineStage } from '../types';
 import { MASTER_COMBINE_STAGES, StageDefinition, buildTaskMasterCombineTelemetry } from '../utils/masterCombine';
 import { sounds } from '../utils/audio';
+import { PredictiveBedtimePanel } from './PredictiveBedtimePanel';
+import { calculatePredictiveBedtime } from '../utils/predictiveScheduling';
 
 interface MasterCombineModalProps {
   tasks: IncompleteTask[];
@@ -33,6 +37,7 @@ interface MasterCombineModalProps {
   onUpdateTasks: (updatedTasks: IncompleteTask[]) => void;
   onInspectTask: (task: IncompleteTask) => void;
   bedtime: string;
+  onUpdateBedtime?: (newBedtime: string) => void;
 }
 
 export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
@@ -42,7 +47,9 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
   onUpdateTasks,
   onInspectTask,
   bedtime,
+  onUpdateBedtime,
 }) => {
+  const [activeViewTab, setActiveViewTab] = useState<'pipeline' | 'predictive'>('pipeline');
   const [selectedStageId, setSelectedStageId] = useState<MasterCombineStage>('sail');
   const [isRunningCombine, setIsRunningCombine] = useState(false);
   const [activeStageStep, setActiveStageStep] = useState<MasterCombineStage | null>(null);
@@ -55,6 +62,12 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
   const completedTasks = tasks.filter(t => t.status === 'completed');
   const totalTasks = tasks.length;
   const overallPeaceScore = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 100;
+
+  // Real-time workload-intensity and predictive bedtime recommendation
+  const quickRecommendation = useMemo(
+    () => calculatePredictiveBedtime({ tasks, currentBedtime: bedtime }),
+    [tasks, bedtime]
+  );
 
   // Run all pending tasks through the full Master Combine Pipeline: S.A.I.L > ABIDE > AZRAEL > A.A.A. > Arc of Change
   const handleExecuteMasterCombine = async () => {
@@ -178,6 +191,19 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800">
                   {overallPeaceScore}% Peace Index
                 </span>
+                <button
+                  onClick={() => setActiveViewTab('predictive')}
+                  className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/80 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Click to calibrate with Predictive Bedtime Engine"
+                >
+                  <Moon className="w-2.5 h-2.5 text-amber-300" />
+                  <span>Suggested: <strong className="text-white">{quickRecommendation.suggestedBedtime}</strong></span>
+                  {quickRecommendation.differenceMinutes !== 0 && (
+                    <span className={quickRecommendation.differenceMinutes > 0 ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>
+                      ({quickRecommendation.differenceMinutes > 0 ? `+${quickRecommendation.differenceMinutes}m` : `${quickRecommendation.differenceMinutes}m`})
+                    </span>
+                  )}
+                </button>
               </div>
               <p className="text-xs text-stone-400">
                 S.A.I.L ❯ ABIDE ❯ AZRAEL ❯ A.A.A. ❯ Arc of Change
@@ -209,6 +235,47 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
           </div>
         </div>
 
+        {/* View Switcher: Five-Stage Gauntlet vs Predictive Bedtime Engine */}
+        <div className="bg-stone-900 border-b border-stone-800 px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="flex items-center gap-1.5 bg-stone-950/80 p-1 rounded-xl border border-stone-800 self-start">
+            <button
+              onClick={() => setActiveViewTab('pipeline')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeViewTab === 'pipeline'
+                  ? 'bg-stone-800 text-white shadow-xs'
+                  : 'text-stone-400 hover:text-stone-200'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Five-Stage Gauntlet</span>
+            </button>
+            <button
+              onClick={() => setActiveViewTab('predictive')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeViewTab === 'predictive'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs'
+                  : 'text-stone-400 hover:text-stone-200'
+              }`}
+            >
+              <Moon className="w-3.5 h-3.5 text-amber-300" />
+              <span>Predictive Bedtime Engine</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+                quickRecommendation.differenceMinutes !== 0
+                  ? 'bg-amber-400 text-amber-950'
+                  : 'bg-stone-800 text-stone-300'
+              }`}>
+                {quickRecommendation.suggestedBedtime}
+              </span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-stone-400">
+            <span>Workload: <strong className="text-white">{quickRecommendation.intensityTierLabel}</strong></span>
+            <span>•</span>
+            <span>Wind-Down: <strong className="text-indigo-300">{quickRecommendation.windDownStartTime}</strong></span>
+          </div>
+        </div>
+
         {/* Live Banner if Running */}
         {isRunningCombine && (
           <div className="bg-indigo-950 text-indigo-200 px-5 py-2.5 text-xs flex items-center justify-between border-b border-indigo-900 animate-pulse">
@@ -222,8 +289,10 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
           </div>
         )}
 
-        {/* Pipeline Step Ribbon */}
-        <div className="bg-stone-50 border-b border-stone-200 p-3 sm:px-6">
+        {activeViewTab === 'pipeline' ? (
+          <>
+            {/* Pipeline Step Ribbon */}
+            <div className="bg-stone-50 border-b border-stone-200 p-3 sm:px-6">
           <div className="grid grid-cols-5 gap-2 sm:gap-3">
             {MASTER_COMBINE_STAGES.map((stg, index) => {
               const isSelected = selectedStageId === stg.id;
@@ -469,10 +538,62 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
               <div className="flex items-center justify-between text-[10px] text-stone-400 z-10">
                 <span>09:00 AM • Lingering drafts & unfinished tabs</span>
                 <span className="text-indigo-300 font-mono">S.A.I.L ❯ ABIDE ❯ AZRAEL ❯ A.A.A.</span>
-                <span className="text-emerald-300 font-mono">23:00 PM • Sleep with zero debt</span>
+                <span className="text-emerald-300 font-mono">{quickRecommendation.suggestedBedtime} PM • Sleep with zero debt</span>
               </div>
             </div>
           </div>
+
+          {/* Embedded Predictive Bedtime Calibration inside Arc of Change */}
+          {selectedStageId === 'arc_of_change' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5 text-indigo-600" />
+                  Predictive Bedtime Engine (Arc of Change Calibration)
+                </span>
+                <span className="text-xs text-stone-500">
+                  Optimal Bedtime: <strong className="text-indigo-700">{quickRecommendation.suggestedBedtime}</strong> ({quickRecommendation.intensityTierLabel})
+                </span>
+              </div>
+              <PredictiveBedtimePanel
+                tasks={tasks}
+                currentBedtime={bedtime}
+                onUpdateBedtime={onUpdateBedtime || (() => {})}
+              />
+            </div>
+          )}
+
+          {/* Quick Predictive Scheduling Banner when exploring Stages 1-4 */}
+          {selectedStageId !== 'arc_of_change' && (
+            <div className="bg-gradient-to-r from-stone-900 via-indigo-950/70 to-stone-900 text-stone-100 rounded-xl p-3.5 border border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center shrink-0">
+                  <Moon className="w-4 h-4 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">Predictive Bedtime Engine</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">
+                      Suggested: {quickRecommendation.suggestedBedtime}
+                    </span>
+                    <span className="text-[10px] text-stone-400">
+                      ({quickRecommendation.intensityTierLabel})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    {quickRecommendation.headline}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveViewTab('predictive')}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Calibrate Bedtime</span>
+              </button>
+            </div>
+          )}
 
           {/* Tasks in the Master Combine Pipeline */}
           <div>
@@ -572,6 +693,71 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
             </div>
           )}
         </div>
+      </>
+    ) : (
+      <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        <PredictiveBedtimePanel
+          tasks={tasks}
+          currentBedtime={bedtime}
+          onUpdateBedtime={onUpdateBedtime || (() => {})}
+        />
+
+        {/* Workload Inventory Linked to Predictive Model */}
+        <div className="bg-stone-50 rounded-xl p-5 border border-stone-200">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="text-xs font-bold text-stone-900 tracking-tight flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                Workday Trails Calibrated into Predictive Model ({tasks.length})
+              </h4>
+              <p className="text-[11px] text-stone-500 mt-0.5">
+                Cognitive intensity weights and residual progress gaps driving bedtime recommendation
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveViewTab('pipeline')}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>Open Pipeline Gauntlet</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {tasks.map((task) => {
+              const isComp = task.status === 'completed';
+              return (
+                <div
+                  key={task.id}
+                  onClick={() => onInspectTask(task)}
+                  className="p-3 rounded-xl bg-white border border-stone-200 hover:border-stone-300 hover:shadow-xs transition-all cursor-pointer flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-semibold text-stone-900 truncate block">
+                      {task.title}
+                    </span>
+                    <span className="text-[10px] text-stone-500 mt-0.5 block truncate">
+                      {task.category.toUpperCase()} • {task.sourceTrail}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                        isComp
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      {task.currentProgress}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    )}
 
         {/* Footer */}
         <div className="p-4 border-t border-stone-200 bg-stone-50 flex items-center justify-between text-xs text-stone-600">

@@ -54,6 +54,8 @@ export const ServicesHubModal: React.FC<ServicesHubModalProps> = ({
         return <Cloud className="w-5 h-5 text-sky-500" />;
       case 'jupyter':
         return <BookOpen className="w-5 h-5 text-amber-500" />;
+      case 'notebooklm':
+        return <Sparkles className="w-5 h-5 text-indigo-500" />;
       default:
         return <Layers className="w-5 h-5 text-stone-500" />;
     }

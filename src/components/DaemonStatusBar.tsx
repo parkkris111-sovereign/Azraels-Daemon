@@ -66,14 +66,22 @@ export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
           </div>
           <p className="text-[11px] text-stone-500 mt-1.5 flex items-center justify-between">
             <span>{pendingCount} lingering {pendingCount === 1 ? 'task' : 'tasks'}</span>
-            {readinessPercentage === 100 && (
+            {readinessPercentage === 100 ? (
               <button 
                 onClick={onOpenAudit}
                 className="text-emerald-700 font-medium hover:underline flex items-center gap-0.5"
               >
                 Review audit <ArrowRight className="w-2.5 h-2.5" />
               </button>
-            )}
+            ) : onOpenMasterCombine ? (
+              <button
+                onClick={onOpenMasterCombine}
+                className="text-indigo-600 font-medium hover:underline flex items-center gap-0.5"
+                title="Open Master Combine Predictive Bedtime Engine"
+              >
+                Predict Bedtime <ArrowRight className="w-2.5 h-2.5" />
+              </button>
+            ) : null}
           </p>
         </div>
 
