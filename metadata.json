@@ -1,0 +1,6 @@
+{
+  "name": "Integrator Daemon",
+  "description": "An autonomous daemon that follows your daily online trails, completes half-finished tasks (1%-99%), and closes everything out before sleep.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
