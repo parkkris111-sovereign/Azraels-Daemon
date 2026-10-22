@@ -29,10 +29,14 @@ import { BedtimeAuditModal } from './components/BedtimeAuditModal';
 import { DailySummaryReportModal } from './components/DailySummaryReportModal';
 import { MasterCombineModal } from './components/MasterCombineModal';
 import { ServicesHubModal } from './components/ServicesHubModal';
+import { GoogleDriveModal } from './components/GoogleDriveModal';
 import { DaemonTerminal } from './components/DaemonTerminal';
 import { sounds } from './utils/audio';
 import { getCurrentTimeFormatted } from './utils/time';
 import { buildTaskMasterCombineTelemetry } from './utils/masterCombine';
+import { initAuth } from './utils/googleAuth';
+import { User } from 'firebase/auth';
+import { uploadFileToDrive, ensureBedtimeClosuresFolder } from './utils/googleDrive';
 
 const STORAGE_KEY_TASKS = 'integrator_daemon_tasks_v2';
 const STORAGE_KEY_BEDTIME = 'integrator_daemon_bedtime_v1';
@@ -46,7 +50,15 @@ export default function App() {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(STORAGE_KEY_TASKS);
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.map((t: IncompleteTask) => ({
+              ...t,
+              priority: t.priority || 'medium',
+            }));
+          }
+        }
       } catch {}
     }
     return INITIAL_TASKS;
@@ -100,10 +112,31 @@ export default function App() {
   const [isDailySummaryOpen, setIsDailySummaryOpen] = useState(false);
   const [isMasterCombineOpen, setIsMasterCombineOpen] = useState(false);
   const [isServicesHubOpen, setIsServicesHubOpen] = useState(false);
+  const [isGoogleDriveOpen, setIsGoogleDriveOpen] = useState(false);
+  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [driveAccessToken, setDriveAccessToken] = useState<string | null>(null);
   const [executingActionId, setExecutingActionId] = useState<string | null>(null);
+
+  // Initialize Firebase Auth listener for Google Drive
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        if (token) setDriveAccessToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setDriveAccessToken(null);
+      }
+    );
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
   const [activeLog, setActiveLog] = useState<string>('Daemon online • Monitoring workday trails & online services');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
   // Logs stream
@@ -112,13 +145,13 @@ export default function App() {
       id: 'log-1',
       timestamp: getCurrentTimeFormatted(),
       level: 'info',
-      message: 'Integrator daemon process online. Patrolling Gmail, Outlook, Trello, Asana, Drive & Jupyter notebooks.',
+      message: 'Integrator daemon process online. Running in 24/7 All-Day Mode (no sleep). Patrolling Gmail, Outlook, Trello, Asana, Drive & Jupyter notebooks.',
     },
     {
       id: 'log-2',
       timestamp: getCurrentTimeFormatted(),
       level: 'daemon',
-      message: 'Connected account: krissmgusa@gmail.com (+3 linked accounts). Discovered unfinished items left between 25% and 80%.',
+      message: 'Connected account: krissmgusa@gmail.com (+3 linked accounts). Continuous background ingestion active 24/7.',
     },
   ]);
 
@@ -220,7 +253,23 @@ export default function App() {
       });
 
       const data = await response.json();
-      const receipt = data.receipt || (data.resultSummary ? `Receipt #${data.transactionId || Date.now()}: ${data.resultSummary}` : `Receipt #${data.transactionId || Date.now()}: Action dispatched successfully`);
+      let receipt = data.receipt || (data.resultSummary ? `Receipt #${data.transactionId || Date.now()}: ${data.resultSummary}` : `Receipt #${data.transactionId || Date.now()}: Action dispatched successfully`);
+
+      // If connected to Google Drive, upload real file artifact to Drive
+      if (action.serviceId === 'google_drive' && driveAccessToken) {
+        try {
+          const folderId = await ensureBedtimeClosuresFolder(driveAccessToken);
+          const uploaded = await uploadFileToDrive(driveAccessToken, {
+            name: `${task.title.replace(/[/\\?%*:|"<>]/g, '_')}_closure.md`,
+            content: `# Deliverable: ${task.title}\n\n${task.completedContent || task.originalContent}\n\n---\n**Sealed by Integrator Daemon**\n**Attestation:** AAA-VERIFIED\n**Timestamp:** ${new Date().toLocaleTimeString()}`,
+            parentFolderId: folderId,
+          });
+          receipt = `[Google Drive API v3] Uploaded to "/Daemon_Bedtime_Closures/${uploaded.name}". File ID: ${uploaded.id}`;
+          addLog('success', `Directly saved "${uploaded.name}" to Google Drive folder /Daemon_Bedtime_Closures/!`, taskId);
+        } catch (driveErr) {
+          console.warn('Direct Google Drive upload fallback to simulated receipt:', driveErr);
+        }
+      }
 
       // Update task action status
       setTasks((prev) =>
@@ -343,14 +392,14 @@ export default function App() {
     }
   };
 
-  // Run full Bedtime Sweep on all pending items
+  // Run full All-Day Continuous Sweep on all pending items
   const handleRunBedtimeSweep = async () => {
     const uncompleted = tasks.filter((t) => t.status !== 'completed');
     if (uncompleted.length === 0) return;
 
     setIsSweeping(true);
     sounds.playBedtimeSweep();
-    addLog('daemon', `⚡ Pre-Sleep Sweep initiated: Sweeping ${uncompleted.length} lingering items across all services before bedtime (${bedtime})...`);
+    addLog('daemon', `⚡ All-Day Continuous Sweep initiated: Sweeping ${uncompleted.length} lingering items across all services in 24/7 non-stop mode...`);
 
     for (let i = 0; i < uncompleted.length; i++) {
       const task = uncompleted[i];
@@ -361,7 +410,7 @@ export default function App() {
 
     setIsSweeping(false);
     sounds.playAllClearSleepReady();
-    addLog('success', `✨ Bedtime Sweep finished! All lingering trails resolved. Zero open items. Sleep in peace.`);
+    addLog('success', `✨ All-Day Sweep finished! All lingering trails resolved. Zero open items across 24h.`);
     setIsAuditOpen(true);
   };
 
@@ -477,13 +526,19 @@ export default function App() {
         return false;
       }
 
+      // Priority
+      if (priorityFilter !== 'all') {
+        const taskPriority = t.priority || 'medium';
+        if (taskPriority !== priorityFilter) return false;
+      }
+
       // Status
       if (statusFilter === 'pending' && t.status === 'completed') return false;
       if (statusFilter === 'completed' && t.status !== 'completed') return false;
 
       return true;
     });
-  }, [tasks, emailAccounts, selectedEmailId, searchQuery, selectedCategory, statusFilter]);
+  }, [tasks, emailAccounts, selectedEmailId, searchQuery, selectedCategory, priorityFilter, statusFilter]);
 
   return (
     <div className="min-h-screen bg-stone-100/60 text-stone-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">
@@ -497,6 +552,8 @@ export default function App() {
         onOpenServicesHub={() => setIsServicesHubOpen(true)}
         onOpenDailySummary={() => setIsDailySummaryOpen(true)}
         onOpenMasterCombine={() => setIsMasterCombineOpen(true)}
+        onOpenGoogleDrive={() => setIsGoogleDriveOpen(true)}
+        isDriveConnected={!!driveAccessToken}
         isSweeping={isSweeping}
         pendingCount={pendingCount}
         completedCount={completedCount}
@@ -596,6 +653,17 @@ export default function App() {
               <option value="communication">Slack & Chat</option>
               <option value="research">Research & Tabs</option>
             </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as any)}
+              className="text-xs bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-stone-900 text-stone-700 font-medium"
+            >
+              <option value="all">All Priorities</option>
+              <option value="high">High Priority</option>
+              <option value="medium">Medium Priority</option>
+              <option value="low">Low Priority</option>
+            </select>
           </div>
         </div>
 
@@ -617,6 +685,7 @@ export default function App() {
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
+                setPriorityFilter('all');
                 setStatusFilter('all');
                 setSelectedEmailId(null);
               }}
@@ -750,8 +819,26 @@ export default function App() {
           onClose={() => setIsServicesHubOpen(false)}
           onSyncAll={handleSyncAllServices}
           isSyncing={isSyncingServices}
+          onOpenGoogleDrive={() => setIsGoogleDriveOpen(true)}
         />
       )}
+
+      <GoogleDriveModal
+        isOpen={isGoogleDriveOpen}
+        onClose={() => setIsGoogleDriveOpen(false)}
+        tasks={tasks}
+        currentUser={googleUser}
+        accessToken={driveAccessToken}
+        onAuthChange={(user, token) => {
+          setGoogleUser(user);
+          setDriveAccessToken(token);
+          if (user) {
+            addLog('daemon', `Google Drive active: ${user.email} connected via OAuth 2.0.`);
+          } else {
+            addLog('info', 'Google Drive disconnected.');
+          }
+        }}
+      />
     </div>
   );
 }

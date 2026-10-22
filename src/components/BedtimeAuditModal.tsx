@@ -10,7 +10,8 @@ import {
   Award,
   ArrowRight,
   Clock,
-  BarChart3
+  BarChart3,
+  Zap
 } from 'lucide-react';
 import { IncompleteTask } from '../types';
 
@@ -46,14 +47,14 @@ export const BedtimeAuditModal: React.FC<BedtimeAuditModalProps> = ({
     : 0;
 
   const handleCopySummary = () => {
-    const summaryText = `[Integrator Daemon] Bedtime Close-Out Report (${new Date().toLocaleDateString()})\n` +
-      `Target Bedtime: ${bedtime}\n` +
-      `Status: All ${totalClosed} tasks closed to 100%. Zero loose ends remaining.\n\n` +
+    const summaryText = `[Integrator Daemon] 24/7 Continuous Close-Out Report (${new Date().toLocaleDateString()})\n` +
+      `Mode: All-Day Non-Stop Operation (No Sleep Downtime)\n` +
+      `Status: All ${totalClosed} tasks closed to 100%. Zero loose ends remaining across 24h.\n\n` +
       completedTasks.map((t, idx) => 
         `${idx + 1}. [${t.category.toUpperCase()}] ${t.title} (${t.currentProgress}% -> 100%)\n` +
         `   • Summary: ${t.completionSummary || 'Resolved'}`
       ).join('\n\n') +
-      `\n\nBedtime Peace of Mind: Guaranteed.`;
+      `\n\nContinuous Workspace Velocity: 100% Guaranteed.`;
 
     navigator.clipboard.writeText(summaryText);
     setCopied(true);
@@ -63,7 +64,7 @@ export const BedtimeAuditModal: React.FC<BedtimeAuditModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Serene Header */}
+        {/* Continuous Header */}
         <div className="p-6 bg-gradient-to-b from-stone-900 via-stone-900 to-stone-850 text-white relative">
           <button
             onClick={onClose}
@@ -73,20 +74,20 @@ export const BedtimeAuditModal: React.FC<BedtimeAuditModalProps> = ({
           </button>
 
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <Moon className="w-6 h-6" />
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <Zap className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xs uppercase tracking-wider text-emerald-400 font-semibold">
-                Pre-Sleep Peace of Mind
+              <span className="text-xs uppercase tracking-wider text-amber-400 font-semibold">
+                24/7 All-Day Autonomous Patrol
               </span>
               <h2 className="text-xl font-bold tracking-tight">
-                All Trails Closed Out for Sleep
+                Continuous Workspace Closure Audit
               </h2>
             </div>
           </div>
           <p className="text-xs text-stone-300 max-w-md">
-            Your Integrator Daemon tracked behind your day online, finished up every lingering draft, and ensured 0 dangling tasks remain before your {bedtime} sleep target.
+            Your Integrator Daemon operates in 24/7 non-stop mode with zero sleep downtime, continuously resolving incomplete drafts and ensuring zero dangling loops across all connected services.
           </p>
 
           {/* Metrics summary ribbon */}

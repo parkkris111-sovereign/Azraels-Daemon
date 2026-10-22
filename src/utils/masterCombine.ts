@@ -72,13 +72,13 @@ export const MASTER_COMBINE_STAGES: StageDefinition[] = [
     code: 'Arc of Change',
     name: 'Arc of Change',
     shortLabel: 'Arc of Change',
-    subtitle: 'Daylight Fragmentation ➔ Nocturnal Tranquility',
-    motto: 'Transform Daytime Chaos into Restful Bedtime Peace',
+    subtitle: 'Daylight Fragmentation ➔ Continuous 24/7 Flow',
+    motto: 'Transform Daytime Chaos into Continuous Non-Stop Mastery',
     color: 'text-indigo-600',
     borderColor: 'border-indigo-400',
     bgActive: 'bg-indigo-50',
     textGlow: 'shadow-indigo-500/20',
-    description: 'The overarching psychological and cognitive transformation: shifting your mind from daytime fragmented open loops into deep, guaranteed bedtime serenity.',
+    description: 'The overarching operational transformation: shifting your workspace from fragmented open loops into uninterrupted, continuous 24/7 momentum with zero sleep downtime.',
   },
 ];
 
@@ -159,14 +159,14 @@ export function buildTaskMasterCombineTelemetry(
     arcOfChange: {
       stage: 'arc_of_change',
       name: 'Arc of Change',
-      subtitle: 'Daylight Fragmentation ➔ Nocturnal Tranquility',
+      subtitle: 'Daylight Fragmentation ➔ Continuous 24/7 Flow',
       status: arcStatus,
       dayStateEntropy: 85,
       nightStatePeaceScore: isCompleted ? 100 : Math.round((progress / 100) * 100),
       tranquilityDeltaPct: isCompleted ? Math.round(100 - progress) : 0,
       cognitivePeaceVerdict: isCompleted
-        ? 'Dangling loop eliminated. Zero mental carryover into sleep cycle.'
-        : `Pending Master Combine resolution before bedtime.`,
+        ? 'Dangling loop eliminated. Continuous 24/7 flow preserved with zero downtime.'
+        : `Pending continuous Master Combine gauntlet resolution.`,
     },
     pipelineCompletedAt: isCompleted ? (task.completedAt || new Date().toLocaleTimeString()) : undefined,
   };

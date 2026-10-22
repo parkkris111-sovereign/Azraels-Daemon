@@ -122,23 +122,23 @@ export const PredictiveBedtimePanel: React.FC<PredictiveBedtimePanelProps> = ({
       {/* Top Banner & Mode Header */}
       <div className="p-4 sm:p-5 border-b border-stone-800 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gradient-to-r from-stone-900 via-indigo-950/30 to-stone-900">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shrink-0">
-            <Moon className="w-5 h-5 text-indigo-200" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md shrink-0">
+            <Zap className="w-5 h-5 text-amber-200" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-                Predictive Bedtime Engine
+                24/7 Continuous Pacing & Throughput Engine
               </h3>
               <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${getTierBadgeStyle(recommendation.intensityTier)}`}>
                 {recommendation.intensityTierLabel}
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-800 text-stone-300 border border-stone-700">
-                {recommendation.modeUsed === 'ai' ? '✨ Gemini 3.8 Flash' : '⚡ Circadian Model v3'}
+                All Day • No Sleep
               </span>
             </div>
             <p className="text-xs text-stone-400 mt-0.5">
-              Historical task velocity & workload-intensity sleep calibration
+              Continuous workload pacing & non-stop loop closure velocity across the 24-hour cycle
             </p>
           </div>
         </div>

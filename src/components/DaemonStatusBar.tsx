@@ -7,7 +7,8 @@ import {
   Sparkles, 
   Activity, 
   Layers,
-  ArrowRight
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 import { DaemonLog } from '../types';
 
@@ -43,12 +44,12 @@ export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
   return (
     <div className="bg-white border border-stone-200/90 rounded-xl p-4 shadow-xs mb-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        {/* Metric 1: Sleep Readiness */}
+        {/* Metric 1: 24/7 Queue Clearance */}
         <div className="flex flex-col justify-between border-b md:border-b-0 md:border-r border-stone-200 pb-3 md:pb-0 md:pr-4">
           <div className="flex items-center justify-between text-xs text-stone-500 mb-1">
             <span className="flex items-center gap-1.5 font-medium">
-              <Moon className="w-3.5 h-3.5 text-indigo-600" />
-              Pre-Sleep Readiness
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              24/7 Queue Clearance
             </span>
             <span className="font-semibold text-stone-900">{readinessPercentage}%</span>
           </div>
@@ -58,8 +59,8 @@ export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
                 readinessPercentage === 100 
                   ? 'bg-emerald-500' 
                   : readinessPercentage > 50 
-                    ? 'bg-indigo-600' 
-                    : 'bg-amber-500'
+                    ? 'bg-amber-500' 
+                    : 'bg-indigo-600'
               }`}
               style={{ width: `${readinessPercentage}%` }}
             />
@@ -77,9 +78,9 @@ export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
               <button
                 onClick={onOpenMasterCombine}
                 className="text-indigo-600 font-medium hover:underline flex items-center gap-0.5"
-                title="Open Master Combine Predictive Bedtime Engine"
+                title="Open Master Combine Continuous Pacing Engine"
               >
-                Predict Bedtime <ArrowRight className="w-2.5 h-2.5" />
+                Continuous Pacing <ArrowRight className="w-2.5 h-2.5" />
               </button>
             ) : null}
           </p>

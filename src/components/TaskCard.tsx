@@ -24,9 +24,9 @@ import {
   Send,
   Cloud,
   CheckSquare,
-  Play
+  Play,
 } from 'lucide-react';
-import { IncompleteTask, TaskCategory, OnlineServiceId } from '../types';
+import { IncompleteTask, TaskCategory, OnlineServiceId, TaskPriority } from '../types';
 
 interface TaskCardProps {
   task: IncompleteTask;
@@ -122,6 +122,44 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
+  const getPriorityBadge = (priority?: TaskPriority) => {
+    const p = priority || 'medium';
+    switch (p) {
+      case 'high':
+        return (
+          <span 
+            className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-200"
+            title="Priority: High"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            High Priority
+          </span>
+        );
+      case 'medium':
+        return (
+          <span 
+            className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200"
+            title="Priority: Medium"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Medium
+          </span>
+        );
+      case 'low':
+        return (
+          <span 
+            className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded border bg-stone-50 text-stone-600 border-stone-200"
+            title="Priority: Low"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+            Low
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className={`border rounded-xl transition-all duration-200 flex flex-col justify-between ${
       isCompleted 
@@ -138,6 +176,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <CategoryIcon className="w-3.5 h-3.5" />
               {config.label}
             </span>
+            {getPriorityBadge(task.priority)}
             {getServiceBadge(task.serviceId)}
             {task.notebookData && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-700 font-mono">
@@ -248,7 +287,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             {task.daemonActionsTaken && task.daemonActionsTaken.length > 0 && (
               <div className="pt-2 border-t border-emerald-100/60 mt-2">
                 <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1">
-                  Actions Executed Before Sleep
+                  Actions Executed in Continuous Loop
                 </p>
                 <div className="grid grid-cols-1 gap-1 text-[11px] text-stone-600">
                   {task.daemonActionsTaken.map((action, i) => (

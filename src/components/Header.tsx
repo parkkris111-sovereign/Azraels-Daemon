@@ -12,7 +12,9 @@ import {
   Settings2,
   Layers,
   BookOpen,
-  BarChart3
+  BarChart3,
+  HardDrive,
+  Zap
 } from 'lucide-react';
 import { formatCountdownToBedtime } from '../utils/time';
 import { sounds } from '../utils/audio';
@@ -26,6 +28,8 @@ interface HeaderProps {
   onOpenServicesHub?: () => void;
   onOpenDailySummary?: () => void;
   onOpenMasterCombine?: () => void;
+  onOpenGoogleDrive?: () => void;
+  isDriveConnected?: boolean;
   isSweeping: boolean;
   pendingCount: number;
   completedCount: number;
@@ -44,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenServicesHub,
   onOpenDailySummary,
   onOpenMasterCombine,
+  onOpenGoogleDrive,
+  isDriveConnected = false,
   isSweeping,
   pendingCount,
   completedCount,
@@ -90,47 +96,30 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                     : 'bg-stone-100 text-stone-700 border border-stone-200'
               }`}>
-                {isSweeping ? '⚡ Pre-Sleep Sweep Active' : allClear ? '✨ Bedtime Ready (0 Pending)' : '● Daemon Patrolling'}
+                {isSweeping ? '⚡ All-Day Sweep Active' : allClear ? '✨ 100% Cleared · Continuous Watch Active' : '● 24/7 Daemon Patrolling'}
               </span>
             </div>
             <p className="text-xs text-stone-500 line-clamp-1">
-              Follows your online workday • Resolves 1%–99% half-finished items across emails, tools & notebooks
+              All-Day Autonomous Engine (No Sleep) • Continuous background resolution of 1%–99% open loops across all services
             </p>
           </div>
         </div>
 
-        {/* Center: Bedtime Clock & Sweep Countdown */}
-        <div className="flex items-center gap-2.5 bg-stone-50 border border-stone-200/80 px-3 py-1.5 rounded-lg text-xs self-start md:self-auto">
-          <Moon className="w-4 h-4 text-indigo-600" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-stone-500 font-medium">Bedtime Target:</span>
-            {showTimePicker ? (
-              <input
-                type="time"
-                value={bedtime}
-                onChange={(e) => {
-                  onBedtimeChange(e.target.value);
-                  setShowTimePicker(false);
-                }}
-                onBlur={() => setShowTimePicker(false)}
-                autoFocus
-                className="bg-white border border-stone-300 rounded px-1.5 py-0.5 text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowTimePicker(true)}
-                className="font-semibold text-stone-900 hover:text-indigo-600 underline decoration-dotted transition-colors"
-                title="Click to adjust bedtime"
-              >
-                {bedtime}
-              </button>
-            )}
+        {/* Center: 24/7 All-Day Operation Indicator (No Sleep) */}
+        <div className="flex items-center gap-2.5 bg-stone-900 text-stone-100 border border-stone-800 px-3.5 py-1.5 rounded-lg text-xs self-start md:self-auto shadow-2xs">
+          <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-white tracking-wide">
+              24/7 All-Day Mode
+            </span>
+            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              No Sleep • Always On
+            </span>
           </div>
-          <span className="text-stone-300">|</span>
-          <span className={`font-medium ${countdown.isPastBedtime ? 'text-amber-700 font-semibold' : 'text-stone-600'}`}>
-            <Clock className="w-3.5 h-3.5 inline mr-1 text-stone-400" />
-            {countdown.label}
+          <span className="text-stone-700">|</span>
+          <span className="font-mono text-stone-300 text-[11px] flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-stone-400" />
+            Continuous Patrol Active
           </span>
         </div>
 
@@ -140,11 +129,30 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenServicesHub}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-medium transition-colors cursor-pointer"
               title="View connected online services (Gmail, Trello, Asana, Drive, Notebooks)"
             >
               <Layers className="w-3.5 h-3.5 text-indigo-600" />
               <span>Services ({connectedServicesCount})</span>
+            </button>
+          )}
+
+          {onOpenGoogleDrive && (
+            <button
+              type="button"
+              onClick={onOpenGoogleDrive}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                isDriveConnected
+                  ? 'border-emerald-300 bg-emerald-50/80 text-emerald-800 hover:bg-emerald-100'
+                  : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700'
+              }`}
+              title="Open Google Drive Workspace Cloud Storage"
+            >
+              <HardDrive className={`w-3.5 h-3.5 ${isDriveConnected ? 'text-emerald-600' : 'text-stone-500'}`} />
+              <span>Drive</span>
+              {isDriveConnected && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              )}
             </button>
           )}
 
@@ -201,10 +209,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onOpenAudit}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium shadow-sm transition-all animate-pulse"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium shadow-sm transition-all"
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Bedtime Audit (0 Pending)</span>
+              <span>Continuous Audit (0 Pending)</span>
             </button>
           ) : (
             <button
@@ -213,8 +221,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onRunBedtimeSweep}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 disabled:bg-stone-300 text-white text-xs font-medium shadow-sm transition-all"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>{isSweeping ? 'Sweeping...' : `Execute Pre-Sleep Sweep (${pendingCount})`}</span>
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isSweeping ? 'Sweeping All Day...' : `Execute All-Day Sweep (${pendingCount})`}</span>
             </button>
           )}
 

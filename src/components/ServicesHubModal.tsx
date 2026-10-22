@@ -23,6 +23,7 @@ interface ServicesHubModalProps {
   onClose: () => void;
   onSyncAll: () => void;
   isSyncing: boolean;
+  onOpenGoogleDrive?: () => void;
 }
 
 export const ServicesHubModal: React.FC<ServicesHubModalProps> = ({
@@ -30,6 +31,7 @@ export const ServicesHubModal: React.FC<ServicesHubModalProps> = ({
   onClose,
   onSyncAll,
   isSyncing,
+  onOpenGoogleDrive,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'email' | 'project_management' | 'cloud_storage' | 'notebook'>('all');
   const [testedAction, setTestedAction] = useState<string | null>(null);
@@ -192,7 +194,20 @@ export const ServicesHubModal: React.FC<ServicesHubModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
+                  {service.id === 'google_drive' && onOpenGoogleDrive && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenGoogleDrive();
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <HardDrive className="w-3.5 h-3.5" />
+                      <span>Drive Explorer</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
                   <span className="text-[11px] font-medium text-emerald-700">Online</span>
                 </div>

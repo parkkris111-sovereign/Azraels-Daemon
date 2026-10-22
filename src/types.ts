@@ -8,6 +8,8 @@ export type TaskCategory =
   | 'admin'
   | 'notebook';
 
+export type TaskPriority = 'high' | 'medium' | 'low';
+
 export type TaskStatus = 'pending' | 'resolving' | 'completed' | 'archived';
 
 export type OnlineServiceId = 
@@ -66,6 +68,7 @@ export interface IncompleteTask {
   id: string;
   title: string;
   category: TaskCategory;
+  priority?: TaskPriority; // 'high' | 'medium' | 'low'
   sourceTrail: string;
   currentProgress: number; // 1 to 99
   originalContent: string;
@@ -144,7 +147,7 @@ export interface AaaTelemetry {
 export interface ArcOfChangeTelemetry {
   stage: 'arc_of_change';
   name: 'Arc of Change';
-  subtitle: 'Daylight Fragmentation ➔ Nocturnal Tranquility';
+  subtitle: 'Daylight Fragmentation ➔ Continuous 24/7 Flow';
   status: 'passed' | 'active' | 'pending';
   dayStateEntropy: number;
   nightStatePeaceScore: number;

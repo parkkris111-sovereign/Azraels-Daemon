@@ -98,6 +98,20 @@ export const TaskDiffModal: React.FC<TaskDiffModalProps> = ({
                 }`}>
                   {isCompleted ? '100% Resolved' : `Left at ${task.currentProgress}%`}
                 </span>
+                {task.priority && (
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded border inline-flex items-center gap-1 ${
+                    task.priority === 'high'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : task.priority === 'medium'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-stone-50 text-stone-600 border-stone-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      task.priority === 'high' ? 'bg-rose-500' : task.priority === 'medium' ? 'bg-amber-500' : 'bg-stone-400'
+                    }`} />
+                    <span className="capitalize">{task.priority} Priority</span>
+                  </span>
+                )}
                 {task.serviceId && (
                   <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-stone-200/80 text-stone-700">
                     Service: {task.serviceId}

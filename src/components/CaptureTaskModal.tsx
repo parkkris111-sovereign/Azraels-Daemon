@@ -15,7 +15,7 @@ import {
   Mail,
   HardDrive
 } from 'lucide-react';
-import { IncompleteTask, TaskCategory, OnlineServiceId, PredefinedServiceAction } from '../types';
+import { IncompleteTask, TaskCategory, OnlineServiceId, PredefinedServiceAction, TaskPriority } from '../types';
 
 interface CaptureTaskModalProps {
   onClose: () => void;
@@ -39,6 +39,7 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TaskCategory>('email');
+  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [sourceTrail, setSourceTrail] = useState('Active browser tab • Today');
   const [serviceId, setServiceId] = useState<OnlineServiceId>('gmail');
   const [currentProgress, setCurrentProgress] = useState(60);
@@ -145,6 +146,7 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
       id: `trail-${Date.now()}`,
       title: title.trim() || (category === 'notebook' ? 'Data Analysis & Modeling Notebook' : 'Unfinished Online Task'),
       category,
+      priority,
       sourceTrail: sourceTrail.trim() || 'Online workday trail',
       currentProgress,
       originalContent: originalContent.trim(),
@@ -215,6 +217,60 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
                   {cat.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Priority Level Selector */}
+          <div>
+            <label className="block font-semibold text-stone-700 mb-1.5">
+              Priority Level
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { 
+                  id: 'high', 
+                  label: 'High', 
+                  hint: 'Urgent continuous closure', 
+                  dotColor: 'bg-rose-500',
+                  selectedClass: 'bg-rose-900 border-rose-900 text-white shadow-2xs',
+                },
+                { 
+                  id: 'medium', 
+                  label: 'Medium', 
+                  hint: 'Standard 24/7 flow', 
+                  dotColor: 'bg-amber-500',
+                  selectedClass: 'bg-stone-900 border-stone-900 text-white shadow-2xs',
+                },
+                { 
+                  id: 'low', 
+                  label: 'Low', 
+                  hint: 'Secondary / backlog', 
+                  dotColor: 'bg-stone-400',
+                  selectedClass: 'bg-stone-800 border-stone-800 text-white shadow-2xs',
+                },
+              ].map((pItem) => {
+                const isSelected = priority === pItem.id;
+                return (
+                  <button
+                    key={pItem.id}
+                    type="button"
+                    onClick={() => setPriority(pItem.id as TaskPriority)}
+                    className={`flex flex-col items-start p-2.5 rounded-lg border text-xs transition-all ${
+                      isSelected
+                        ? pItem.selectedClass
+                        : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : pItem.dotColor}`} />
+                      <span>{pItem.label}</span>
+                    </div>
+                    <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-stone-300' : 'text-stone-400'}`}>
+                      {pItem.hint}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -361,7 +417,7 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
               onClick={() => handleSubmit(false)}
               className="px-4 py-2 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 text-stone-900 font-medium transition-colors"
             >
-              Add to Bedtime Sweep Queue
+              Add to Continuous Sweep Queue
             </button>
 
             <button

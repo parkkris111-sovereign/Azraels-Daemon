@@ -93,7 +93,7 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
         } else if (stg === 'aaa') {
           setActiveTaskTitle('A.A.A.: Generating cryptographic attestation and archival seals...');
         } else if (stg === 'arc_of_change') {
-          setActiveTaskTitle('Arc of Change: Harmonizing daytime entropy into bedtime serenity...');
+          setActiveTaskTitle('Arc of Change: Sustaining continuous 24/7 momentum with zero sleep downtime...');
         }
         await new Promise(r => setTimeout(r, 650));
       }
@@ -253,26 +253,22 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
               onClick={() => setActiveViewTab('predictive')}
               className={`px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeViewTab === 'predictive'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs'
+                  ? 'bg-gradient-to-r from-amber-600 to-purple-600 text-white shadow-xs'
                   : 'text-stone-400 hover:text-stone-200'
               }`}
             >
-              <Moon className="w-3.5 h-3.5 text-amber-300" />
-              <span>Predictive Bedtime Engine</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                quickRecommendation.differenceMinutes !== 0
-                  ? 'bg-amber-400 text-amber-950'
-                  : 'bg-stone-800 text-stone-300'
-              }`}>
-                {quickRecommendation.suggestedBedtime}
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>24/7 Continuous Pacing</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold bg-amber-400 text-amber-950">
+                {quickRecommendation.estimatedResolutionTimeMinutes}m ETA
               </span>
             </button>
           </div>
 
           <div className="flex items-center gap-2 text-[11px] text-stone-400">
-            <span>Workload: <strong className="text-white">{quickRecommendation.intensityTierLabel}</strong></span>
+            <span>Mode: <strong className="text-white">All-Day (No Sleep)</strong></span>
             <span>•</span>
-            <span>Wind-Down: <strong className="text-indigo-300">{quickRecommendation.windDownStartTime}</strong></span>
+            <span>Cadence: <strong className="text-amber-300">Continuous 24/7</strong></span>
           </div>
         </div>
 
@@ -284,7 +280,7 @@ export const MasterCombineModal: React.FC<MasterCombineModalProps> = ({
               <span className="font-medium text-white">{activeTaskTitle}</span>
             </div>
             <span className="font-mono text-[11px] text-indigo-300">
-              Bedtime Target: {bedtime} • Zero Loose Ends
+              24/7 Non-Stop Mode • Zero Sleep Downtime
             </span>
           </div>
         )}
