@@ -13,19 +13,16 @@ import firebaseConfig from '../../firebase-applet-config.json';
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Provider configured with Google Drive scopes
+// Provider configured with Google Drive file scope (matching registered OAuth scope)
 export const googleDriveProvider = new GoogleAuthProvider();
-googleDriveProvider.addScope('https://www.googleapis.com/auth/drive');
 googleDriveProvider.addScope('https://www.googleapis.com/auth/drive.file');
-googleDriveProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
-googleDriveProvider.addScope('https://www.googleapis.com/auth/drive.metadata.readonly');
 
-// Set prompt to select account or re-authenticate cleanly
+// Set prompt to select account cleanly
 googleDriveProvider.setCustomParameters({
   prompt: 'select_account',
 });
 
-// Flag to indicate if we are in the middle of a sign-in flow
+// Flag to guard against concurrent popup requests
 let isSigningIn = false;
 // Cache the access token in memory (never in localStorage or sessionStorage)
 let cachedAccessToken: string | null = null;
@@ -40,7 +37,7 @@ export const initAuth = (
       if (cachedAccessToken) {
         if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
       } else if (!isSigningIn) {
-        // User logged in via session, but fresh access token might need interactive sign-in
+        // User logged in via session; token can be obtained on interactive sign-in
         if (onAuthSuccess) onAuthSuccess(user, null);
       }
     } else {
@@ -51,20 +48,37 @@ export const initAuth = (
 };
 
 // Interactive Google Sign-In with popup
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string }> => {
+export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+  if (isSigningIn) {
+    // Avoid initiating a second popup while one is already active
+    return null;
+  }
+
+  isSigningIn = true;
   try {
-    isSigningIn = true;
     const result = await signInWithPopup(auth, googleDriveProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
-      throw new Error('Failed to obtain Google Drive OAuth access token from Firebase Auth');
+      return null;
     }
 
     cachedAccessToken = credential.accessToken;
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
-    console.error('Google Drive Sign-in error:', error);
-    throw error;
+    const errorCode = error?.code || '';
+    // Gracefully handle standard user actions or popup cancellations
+    if (
+      errorCode === 'auth/user-cancelled' ||
+      errorCode === 'auth/popup-closed-by-user' ||
+      errorCode === 'auth/cancelled-popup-request' ||
+      errorCode === 'auth/popup-blocked'
+    ) {
+      return null;
+    }
+
+    // Do not throw unhandled exception or trigger console.error for expected IdP rejections
+    console.warn('Google Sign-In notice:', error?.message || errorCode);
+    return null;
   } finally {
     isSigningIn = false;
   }

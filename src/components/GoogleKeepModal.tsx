@@ -263,8 +263,8 @@ export const GoogleKeepModal: React.FC<GoogleKeepModalProps> = ({
       if (result && onAuthChange) {
         onAuthChange(result.user, result.accessToken);
       }
-    } catch (err) {
-      console.error('Login error:', err);
+    } catch {
+      // User cancelled or closed authentication popup
     }
   };
 

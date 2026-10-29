@@ -110,12 +110,15 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
     setStatusMessage(null);
     try {
       const res = await googleSignIn();
+      if (!res) {
+        setIsSigningIn(false);
+        return;
+      }
       onAuthChange(res.user, res.accessToken);
       sounds.playTaskFinished();
       setStatusMessage({ type: 'success', text: `Connected as ${res.user.email} to Google Drive!` });
       await loadDriveData(res.accessToken);
     } catch (err: any) {
-      console.error('Sign-in failed:', err);
       setStatusMessage({ type: 'error', text: err?.message || 'Failed to authenticate with Google Drive.' });
     } finally {
       setIsSigningIn(false);

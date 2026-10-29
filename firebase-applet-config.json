@@ -3,6 +3,7 @@
   "appId": "1:157146325502:web:e65a74234568d894ab20af",
   "apiKey": "AIzaSyB3lbncSZDMwnEPXikdSbE9jZjtmEJzgtk",
   "authDomain": "seismic-sublime-d3kqt.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-integratordaemon-789c02c4-24e5-40a7-b345-d9aa44d49115",
   "storageBucket": "seismic-sublime-d3kqt.firebasestorage.app",
   "messagingSenderId": "157146325502",
   "measurementId": "",
