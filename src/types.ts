@@ -21,7 +21,26 @@ export type OnlineServiceId =
   | 'dropbox' 
   | 'jupyter' 
   | 'notion'
-  | 'notebooklm';
+  | 'notebooklm'
+  | 'google_keep';
+
+export interface GoogleKeepCheckItem {
+  id: string;
+  text: string;
+  isChecked: boolean;
+}
+export type GoogleKeepItem = GoogleKeepCheckItem;
+
+export interface GoogleKeepNote {
+  id: string;
+  title: string;
+  text?: string;
+  items?: GoogleKeepCheckItem[];
+  color?: string; // e.g. 'amber', 'yellow', 'blue', 'teal', 'red'
+  pinned?: boolean;
+  updatedAt?: string;
+  isSyncedToDaemon?: boolean;
+}
 
 export interface UserEmailAccount {
   id: string;
@@ -76,6 +95,12 @@ export interface IncompleteTask {
   detectedAt: string;
   status: TaskStatus;
   
+  // Time-to-complete estimation calculated by daemon
+  estimatedMinutes?: number;
+
+  // Task dependencies (prerequisite task IDs that must complete first)
+  dependencies?: string[];
+
   // Associated service & account
   serviceId?: OnlineServiceId;
   emailAccountId?: string; // associated user email account ID

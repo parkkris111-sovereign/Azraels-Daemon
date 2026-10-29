@@ -13,13 +13,19 @@ import {
   Layers,
   Send,
   Mail,
-  HardDrive
+  HardDrive,
+  Timer,
+  Lock,
+  Mic,
+  MicOff,
+  Loader2,
 } from 'lucide-react';
 import { IncompleteTask, TaskCategory, OnlineServiceId, PredefinedServiceAction, TaskPriority } from '../types';
 
 interface CaptureTaskModalProps {
   onClose: () => void;
   onAddTask: (newTask: IncompleteTask, finishImmediately?: boolean) => void;
+  existingTasks?: IncompleteTask[];
 }
 
 const CATEGORIES: { id: TaskCategory; label: string }[] = [
@@ -36,10 +42,13 @@ const CATEGORIES: { id: TaskCategory; label: string }[] = [
 export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
   onClose,
   onAddTask,
+  existingTasks = [],
 }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TaskCategory>('email');
   const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(20);
+  const [selectedDependencies, setSelectedDependencies] = useState<string[]>([]);
   const [sourceTrail, setSourceTrail] = useState('Active browser tab • Today');
   const [serviceId, setServiceId] = useState<OnlineServiceId>('gmail');
   const [currentProgress, setCurrentProgress] = useState(60);
@@ -47,6 +56,11 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
   const [userNotes, setUserNotes] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimationNote, setEstimationNote] = useState<string | null>(null);
+
+  // Audio voice transcription state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   const handleEstimateWithAI = async () => {
     if (!originalContent.trim()) return;
@@ -95,6 +109,67 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
     }
   };
 
+  const handleToggleVoiceRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunks, { type: recorder.mimeType || 'audio/webm' });
+        setIsTranscribing(true);
+
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = (reader.result as string).split(',')[1];
+            const mimeType = recorder.mimeType.split(';')[0] || 'audio/webm';
+
+            const res = await fetch('/api/daemon/transcribe-voice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audioBase64: base64Audio, mimeType }),
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data.transcription) {
+                setOriginalContent((prev) => (prev ? `${prev}\n${data.transcription}` : data.transcription));
+                if (!title.trim() && data.suggestedTitle) {
+                  setTitle(data.suggestedTitle);
+                }
+              }
+            }
+            setIsTranscribing(false);
+          };
+        } catch (err) {
+          console.error('Voice transcription error:', err);
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (err) {
+      console.warn('Microphone unavailable or blocked:', err);
+    }
+  };
+
   const handleSubmit = (finishImmediately: boolean) => {
     if (!originalContent.trim() && !title.trim()) return;
 
@@ -108,6 +183,16 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
         description: 'Sends finalized message from connected account.',
         iconName: 'Send',
         targetEntity: 'Gmail: krissmgusa@gmail.com',
+        status: 'pending',
+      });
+    } else if (serviceId === 'google_keep') {
+      predefinedActions.push({
+        id: `act-${Date.now()}-1`,
+        serviceId: 'google_keep',
+        name: 'Sync Note & Check Off Items',
+        description: 'Updates note and marks checklist items complete in Google Keep.',
+        iconName: 'FileText',
+        targetEntity: 'Google Keep: krissmgusa@gmail.com',
         status: 'pending',
       });
     } else if (serviceId === 'trello') {
@@ -147,6 +232,8 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
       title: title.trim() || (category === 'notebook' ? 'Data Analysis & Modeling Notebook' : 'Unfinished Online Task'),
       category,
       priority,
+      estimatedMinutes,
+      dependencies: selectedDependencies,
       sourceTrail: sourceTrail.trim() || 'Online workday trail',
       currentProgress,
       originalContent: originalContent.trim(),
@@ -274,6 +361,84 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
             </div>
           </div>
 
+          {/* Estimated Time-to-Complete Duration Field */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="font-semibold text-stone-700 flex items-center gap-1.5">
+                <Timer className="w-3.5 h-3.5 text-sky-600" />
+                Estimated Time-to-Complete
+              </label>
+              <span className="font-mono text-stone-600 font-semibold bg-sky-50 text-sky-800 border border-sky-200 px-2 py-0.5 rounded text-[11px]">
+                ~{estimatedMinutes} min duration badge
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[10, 15, 20, 25, 35, 45, 60].map((mins) => (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() => setEstimatedMinutes(mins)}
+                  className={`px-3 py-1 rounded-md border text-xs font-mono transition-all ${
+                    estimatedMinutes === mins
+                      ? 'bg-sky-600 border-sky-600 text-white font-bold shadow-2xs'
+                      : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                  }`}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Task Dependencies Selector (Blocked By) */}
+          {existingTasks.filter(t => t.status !== 'completed').length > 0 && (
+            <div className="bg-stone-50 border border-stone-200 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="font-semibold text-stone-700 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-rose-500" />
+                  Prerequisite Dependencies (Marks Task as Blocked)
+                </label>
+                <span className="text-[10px] text-stone-500 font-mono">
+                  {selectedDependencies.length} prerequisite{selectedDependencies.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="max-h-24 overflow-y-auto space-y-1.5 pr-1">
+                {existingTasks
+                  .filter(t => t.status !== 'completed')
+                  .map((t) => {
+                    const isChecked = selectedDependencies.includes(t.id);
+                    return (
+                      <label
+                        key={t.id}
+                        className={`flex items-center gap-2 p-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+                          isChecked
+                            ? 'bg-rose-50 border-rose-300 text-rose-950 font-medium'
+                            : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDependencies([...selectedDependencies, t.id]);
+                            } else {
+                              setSelectedDependencies(selectedDependencies.filter((id) => id !== t.id));
+                            }
+                          }}
+                          className="rounded text-rose-600 focus:ring-rose-500"
+                        />
+                        <span className="truncate flex-1">{t.title}</span>
+                        <span className="text-[10px] font-mono text-stone-400 shrink-0">
+                          {t.currentProgress}% done
+                        </span>
+                      </label>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
           {/* Connected Service & Email Target */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -285,6 +450,7 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
                 onChange={(e) => setServiceId(e.target.value as any)}
                 className="w-full px-2.5 py-2 border border-stone-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-stone-900"
               >
+                <option value="google_keep">Google Keep (Notes & Checklists)</option>
                 <option value="gmail">Gmail API (krissmgusa@gmail.com)</option>
                 <option value="outlook">Microsoft 365 / Outlook</option>
                 <option value="trello">Trello (Sprint Board)</option>
@@ -324,27 +490,59 @@ export const CaptureTaskModal: React.FC<CaptureTaskModalProps> = ({
 
           {/* Incomplete Content */}
           <div>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
               <label className="font-semibold text-stone-700">
                 Incomplete Content / Draft Left Behind
               </label>
-              {originalContent.trim() && (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={isEstimating}
-                  onClick={handleEstimateWithAI}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 transition-colors"
+                  onClick={handleToggleVoiceRecording}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    isRecording
+                      ? 'bg-rose-600 text-white animate-pulse'
+                      : isTranscribing
+                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                      : 'bg-stone-100 text-stone-700 hover:bg-stone-200 border border-stone-200'
+                  }`}
+                  title="Speak workday trail using microphone (gemini-3.5-transcribe)"
                 >
-                  <Wand2 className="w-3 h-3" />
-                  <span>{isEstimating ? 'Estimating...' : 'AI Auto-Detect Completion %'}</span>
+                  {isRecording ? (
+                    <>
+                      <MicOff className="w-3.5 h-3.5" />
+                      <span>Stop Dictation</span>
+                    </>
+                  ) : isTranscribing ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                      <span>Transcribing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3.5 h-3.5 text-stone-600" />
+                      <span>Voice Dictate</span>
+                    </>
+                  )}
                 </button>
-              )}
+
+                {originalContent.trim() && (
+                  <button
+                    type="button"
+                    disabled={isEstimating}
+                    onClick={handleEstimateWithAI}
+                    className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 transition-colors"
+                  >
+                    <Wand2 className="w-3 h-3" />
+                    <span>{isEstimating ? 'Estimating...' : 'AI Auto-Detect %'}</span>
+                  </button>
+                )}
+              </div>
             </div>
             <textarea
               rows={5}
               placeholder={category === 'notebook' 
                 ? `# Paste unfinished notebook code cells or markdown notes here...\nimport pandas as pd\n# [Need ROC-AUC evaluation and conclusion]`
-                : `Paste your unfinished draft, half-written code snippet, bullet points, or open tab notes here...`}
+                : `Paste your unfinished draft, half-written code snippet, bullet points, or open tab notes here (or click Voice Dictate)...`}
               value={originalContent}
               onChange={(e) => setOriginalContent(e.target.value)}
               className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-stone-900 leading-relaxed"

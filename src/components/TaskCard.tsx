@@ -25,11 +25,14 @@ import {
   Cloud,
   CheckSquare,
   Play,
+  Lock,
+  Timer,
 } from 'lucide-react';
 import { IncompleteTask, TaskCategory, OnlineServiceId, TaskPriority } from '../types';
 
 interface TaskCardProps {
   task: IncompleteTask;
+  allTasks?: IncompleteTask[];
   onFinishTask: (task: IncompleteTask) => void;
   onOpenInspect: (task: IncompleteTask) => void;
   onReopenTask?: (id: string) => void;
@@ -51,6 +54,7 @@ const CATEGORY_CONFIG: Record<TaskCategory, { label: string; icon: React.Compone
 
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
+  allTasks,
   onFinishTask,
   onOpenInspect,
   onReopenTask,
@@ -58,6 +62,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   executingActionId,
 }) => {
   const [copied, setCopied] = useState(false);
+
+  // Check if task is blocked by incomplete prerequisite dependencies
+  const blockingTasks = (task.dependencies || [])
+    .map((depId) => allTasks?.find((t) => t.id === depId))
+    .filter((t): t is IncompleteTask => !!t && t.status !== 'completed');
+  const isBlocked = task.status !== 'completed' && blockingTasks.length > 0;
+
+  // Estimated time to complete calculated by daemon analysis
+  const estimatedMinutes = task.estimatedMinutes ?? Math.max(5, Math.round(((100 - task.currentProgress) / 100) * 35));
 
   const config = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.document;
   const CategoryIcon = config.icon;
@@ -75,6 +88,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const getServiceBadge = (serviceId?: OnlineServiceId) => {
     if (!serviceId) return null;
     switch (serviceId) {
+      case 'google_keep':
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-semibold">
+            <FileText className="w-3 h-3 text-amber-700" /> Google Keep
+          </span>
+        );
       case 'trello':
         return (
           <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
@@ -177,6 +196,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               {config.label}
             </span>
             {getPriorityBadge(task.priority)}
+            {/* Duration Badge: Estimated time to complete */}
+            <span 
+              className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded border bg-sky-50 text-sky-800 border-sky-200"
+              title={`Daemon Estimated Time-to-Complete: ~${estimatedMinutes} mins`}
+            >
+              <Timer className="w-3 h-3 text-sky-600" />
+              <span>~{estimatedMinutes}m est.</span>
+            </span>
+            {/* Blocked Badge: Shown if any prerequisite tasks are incomplete */}
+            {isBlocked && (
+              <span 
+                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-100 text-rose-800 border-rose-300 animate-pulse"
+                title={`Blocked by ${blockingTasks.length} prerequisite task(s): ${blockingTasks.map(t => t.title).join(', ')}`}
+              >
+                <Lock className="w-3 h-3 text-rose-600" />
+                <span>Blocked</span>
+              </span>
+            )}
             {getServiceBadge(task.serviceId)}
             {task.notebookData && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-700 font-mono">
@@ -377,6 +414,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </span>
           </div>
         )}
+        {/* Dependency Blocked Visual Indicator */}
+        {isBlocked && (
+          <div className="text-xs bg-rose-50 border border-rose-200 rounded-lg p-2.5 mb-2.5 flex items-start gap-2 text-rose-900 shadow-2xs">
+            <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-rose-950">Blocked by Uncompleted Prerequisite</span>
+                <span className="text-[10px] font-mono uppercase bg-rose-100 text-rose-800 px-1.5 py-0.2 rounded font-semibold border border-rose-200">
+                  {blockingTasks.length} Dependency
+                </span>
+              </div>
+              <p className="text-[11px] text-rose-800 mt-1 leading-relaxed">
+                Prioritization logic: Finish <strong className="font-semibold underline">{blockingTasks.map(t => t.title).join(', ')}</strong> before closing out this item.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Card Actions Footer */}
@@ -386,6 +440,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             {isCompleted ? (
               <span className="text-emerald-700 font-medium flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> Closed at {task.completedAt || 'today'}
+              </span>
+            ) : isBlocked ? (
+              <span className="text-rose-600 font-medium flex items-center gap-1">
+                <Lock className="w-3 h-3 text-rose-500" /> Prerequisite pending
               </span>
             ) : (
               <span className="text-stone-400">
@@ -441,10 +499,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                   type="button"
                   disabled={isResolving}
                   onClick={() => onFinishTask(task)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-stone-900 hover:bg-stone-800 disabled:bg-stone-300 text-white shadow-2xs transition-all"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg shadow-2xs transition-all ${
+                    isBlocked
+                      ? 'bg-rose-900 hover:bg-rose-800 text-white'
+                      : 'bg-stone-900 hover:bg-stone-800 disabled:bg-stone-300 text-white'
+                  }`}
+                  title={isBlocked ? `Blocked by prerequisite. Click to override and close out.` : 'Close out deliverable to 100%'}
                 >
-                  <Sparkles className="w-3 h-3 text-amber-300" />
-                  <span>{isResolving ? 'Finishing...' : 'Close Out (to 100%)'}</span>
+                  {isBlocked ? (
+                    <Lock className="w-3 h-3 text-rose-300" />
+                  ) : (
+                    <Sparkles className="w-3 h-3 text-amber-300" />
+                  )}
+                  <span>{isResolving ? 'Finishing...' : isBlocked ? 'Override & Close Out' : 'Close Out (to 100%)'}</span>
                 </button>
               </>
             )}

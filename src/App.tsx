@@ -30,6 +30,8 @@ import { DailySummaryReportModal } from './components/DailySummaryReportModal';
 import { MasterCombineModal } from './components/MasterCombineModal';
 import { ServicesHubModal } from './components/ServicesHubModal';
 import { GoogleDriveModal } from './components/GoogleDriveModal';
+import { GoogleKeepModal } from './components/GoogleKeepModal';
+import { ProductivityInsightsModal } from './components/ProductivityInsightsModal';
 import { DaemonTerminal } from './components/DaemonTerminal';
 import { sounds } from './utils/audio';
 import { getCurrentTimeFormatted } from './utils/time';
@@ -37,6 +39,7 @@ import { buildTaskMasterCombineTelemetry } from './utils/masterCombine';
 import { initAuth } from './utils/googleAuth';
 import { User } from 'firebase/auth';
 import { uploadFileToDrive, ensureBedtimeClosuresFolder } from './utils/googleDrive';
+import { GoogleKeepNote } from './types';
 
 const STORAGE_KEY_TASKS = 'integrator_daemon_tasks_v2';
 const STORAGE_KEY_BEDTIME = 'integrator_daemon_bedtime_v1';
@@ -113,6 +116,8 @@ export default function App() {
   const [isMasterCombineOpen, setIsMasterCombineOpen] = useState(false);
   const [isServicesHubOpen, setIsServicesHubOpen] = useState(false);
   const [isGoogleDriveOpen, setIsGoogleDriveOpen] = useState(false);
+  const [isGoogleKeepOpen, setIsGoogleKeepOpen] = useState(false);
+  const [isProductivityInsightsOpen, setIsProductivityInsightsOpen] = useState(false);
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const [driveAccessToken, setDriveAccessToken] = useState<string | null>(null);
   const [executingActionId, setExecutingActionId] = useState<string | null>(null);
@@ -198,6 +203,55 @@ export default function App() {
     };
     setLogs((prev) => [newLog, ...prev.slice(0, 49)]);
     setActiveLog(message);
+  };
+
+  const handleImportKeepNoteAsTask = (note: GoogleKeepNote) => {
+    const rawContent = [
+      note.text,
+      note.items ? note.items.map((it) => `[${it.isChecked ? 'x' : ' '}] ${it.text}`).join('\n') : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const totalChecklist = note.items?.length || 0;
+    const checkedCount = note.items?.filter((it) => it.isChecked).length || 0;
+    const initialProgress = totalChecklist > 0 ? Math.max(15, Math.round((checkedCount / totalChecklist) * 85)) : 50;
+    const duration = Math.max(10, Math.round(((100 - initialProgress) / 100) * 30));
+
+    const newTask: IncompleteTask = {
+      id: `trail-keep-${Date.now()}`,
+      title: `Google Keep: ${note.title}`,
+      category: 'document',
+      priority: 'high',
+      sourceTrail: `Google Keep • Pinned Note (${note.color || 'note'})`,
+      currentProgress: initialProgress,
+      estimatedMinutes: duration,
+      dependencies: [],
+      originalContent: rawContent || note.title,
+      userNotes: 'Sync completed items back to Google Keep card upon 100% resolution.',
+      detectedAt: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      status: 'pending',
+      serviceId: 'google_keep',
+      predefinedActions: [
+        {
+          id: `act-keep-${Date.now()}-1`,
+          serviceId: 'google_keep',
+          name: 'Check Off All Items on Google Keep Card',
+          description: 'Updates note and completes checklist in Google Keep.',
+          iconName: 'FileText',
+          targetEntity: `Keep Note: "${note.title}"`,
+          status: 'pending',
+        },
+      ],
+    };
+
+    setTasks((prev) => {
+      const updated = [newTask, ...prev];
+      localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(updated));
+      return updated;
+    });
+
+    addLog('daemon', `Imported Keep note "${note.title}" as active 24/7 daemon loop.`);
   };
 
   const handleBedtimeChange = (newBedtime: string) => {
@@ -553,6 +607,8 @@ export default function App() {
         onOpenDailySummary={() => setIsDailySummaryOpen(true)}
         onOpenMasterCombine={() => setIsMasterCombineOpen(true)}
         onOpenGoogleDrive={() => setIsGoogleDriveOpen(true)}
+        onOpenGoogleKeep={() => setIsGoogleKeepOpen(true)}
+        onOpenProductivityInsights={() => setIsProductivityInsightsOpen(true)}
         isDriveConnected={!!driveAccessToken}
         isSweeping={isSweeping}
         pendingCount={pendingCount}
@@ -586,6 +642,7 @@ export default function App() {
           onOpenAudit={() => setIsAuditOpen(true)}
           onOpenDailySummary={() => setIsDailySummaryOpen(true)}
           onOpenMasterCombine={() => setIsMasterCombineOpen(true)}
+          onOpenProductivityInsights={() => setIsProductivityInsightsOpen(true)}
         />
 
         {/* Filter & Controls Toolbar */}
@@ -700,6 +757,7 @@ export default function App() {
               <TaskCard
                 key={task.id}
                 task={task}
+                allTasks={tasks}
                 onFinishTask={handleFinishTask}
                 onOpenInspect={(t) => setSelectedTask(t)}
                 onReopenTask={handleReopenTask}
@@ -723,10 +781,17 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            <span>Integrator Daemon v2.5 • Services: Gmail, Outlook, Trello, Asana, Drive, Dropbox & Jupyter</span>
+            <span>Integrator Daemon v2.5 • Services: Gmail, Outlook, Trello, Asana, Drive, Keep, Dropbox & Jupyter</span>
           </div>
           <div className="flex items-center gap-3">
             <span>Bedtime Target: <strong>{bedtime}</strong></span>
+            <span>•</span>
+            <button 
+              onClick={() => setIsProductivityInsightsOpen(true)}
+              className="text-indigo-700 hover:text-indigo-900 font-semibold underline"
+            >
+              Productivity Insights (Recharts)
+            </button>
             <span>•</span>
             <button 
               onClick={() => setIsMasterCombineOpen(true)}
@@ -737,7 +802,7 @@ export default function App() {
             <span>•</span>
             <button 
               onClick={() => setIsDailySummaryOpen(true)}
-              className="text-indigo-700 hover:text-indigo-900 font-medium underline"
+              className="text-stone-700 hover:text-stone-900 font-medium underline"
             >
               Daily Summary Report
             </button>
@@ -769,6 +834,7 @@ export default function App() {
         <CaptureTaskModal
           onClose={() => setIsCaptureOpen(false)}
           onAddTask={handleAddTask}
+          existingTasks={tasks}
         />
       )}
 
@@ -813,6 +879,17 @@ export default function App() {
         }}
       />
 
+      <ProductivityInsightsModal
+        isOpen={isProductivityInsightsOpen}
+        onClose={() => setIsProductivityInsightsOpen(false)}
+        tasks={tasks}
+        bedtime={bedtime}
+        onInspectTask={(task) => {
+          setIsProductivityInsightsOpen(false);
+          setSelectedTask(task);
+        }}
+      />
+
       {isServicesHubOpen && (
         <ServicesHubModal
           services={services}
@@ -820,8 +897,27 @@ export default function App() {
           onSyncAll={handleSyncAllServices}
           isSyncing={isSyncingServices}
           onOpenGoogleDrive={() => setIsGoogleDriveOpen(true)}
+          onOpenGoogleKeep={() => setIsGoogleKeepOpen(true)}
         />
       )}
+
+      <GoogleKeepModal
+        isOpen={isGoogleKeepOpen}
+        onClose={() => setIsGoogleKeepOpen(false)}
+        tasks={tasks}
+        onImportNoteAsTask={handleImportKeepNoteAsTask}
+        currentUser={googleUser}
+        accessToken={driveAccessToken}
+        onAuthChange={(user, token) => {
+          setGoogleUser(user);
+          setDriveAccessToken(token);
+          if (user) {
+            addLog('daemon', `Google Keep & Workspace active: ${user.email} connected.`);
+          } else {
+            addLog('info', 'Google account disconnected.');
+          }
+        }}
+      />
 
       <GoogleDriveModal
         isOpen={isGoogleDriveOpen}

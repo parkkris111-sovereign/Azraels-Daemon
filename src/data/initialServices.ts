@@ -142,4 +142,17 @@ export const INITIAL_CONNECTED_SERVICES: ConnectedService[] = [
       { id: 'sync_notebook_lm_sources', name: 'Sync NotebookLM Sources', description: 'Ingests source documents and synthesized summaries from linked NotebookLM projects.' },
     ],
   },
+  {
+    id: 'google_keep',
+    name: 'Google Keep',
+    category: 'cloud_storage',
+    connected: true,
+    activeAccountInfo: 'krissmgusa@gmail.com (Google Keep Notes & Lists)',
+    iconName: 'FileText',
+    supportedActions: [
+      { id: 'sync_keep_notes', name: 'Sync Incomplete Keep Checklists', description: 'Imports unchecked items and draft memos as continuous daemon trails.' },
+      { id: 'archive_completed_to_keep', name: 'Export Resolved Closures to Keep', description: 'Creates a verified closure card in Google Keep with completed deliverable.' },
+      { id: 'check_off_keep_items', name: 'Mark Keep Checklist Items Completed', description: 'Auto-checks completed items on linked Google Keep notes.' },
+    ],
+  },
 ];

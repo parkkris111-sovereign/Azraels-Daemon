@@ -14,7 +14,9 @@ import {
   BookOpen,
   BarChart3,
   HardDrive,
-  Zap
+  Zap,
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 import { formatCountdownToBedtime } from '../utils/time';
 import { sounds } from '../utils/audio';
@@ -29,6 +31,8 @@ interface HeaderProps {
   onOpenDailySummary?: () => void;
   onOpenMasterCombine?: () => void;
   onOpenGoogleDrive?: () => void;
+  onOpenGoogleKeep?: () => void;
+  onOpenProductivityInsights?: () => void;
   isDriveConnected?: boolean;
   isSweeping: boolean;
   pendingCount: number;
@@ -49,6 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDailySummary,
   onOpenMasterCombine,
   onOpenGoogleDrive,
+  onOpenGoogleKeep,
+  onOpenProductivityInsights,
   isDriveConnected = false,
   isSweeping,
   pendingCount,
@@ -156,14 +162,38 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {onOpenGoogleKeep && (
+            <button
+              type="button"
+              onClick={onOpenGoogleKeep}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/80 hover:bg-amber-100 text-amber-900 text-xs font-medium transition-colors cursor-pointer"
+              title="Open Google Keep Notes & Checklists"
+            >
+              <FileText className="w-3.5 h-3.5 text-amber-600" />
+              <span>Keep</span>
+            </button>
+          )}
+
+          {onOpenProductivityInsights && (
+            <button
+              type="button"
+              onClick={onOpenProductivityInsights}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-900 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              title="Launch Recharts Productivity Insights Dashboard (7-Day Completion vs Pending)"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Insights</span>
+            </button>
+          )}
+
           {onOpenDailySummary && (
             <button
               type="button"
               onClick={onOpenDailySummary}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-900 text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-700 text-xs font-medium transition-colors"
               title="Analyze completed workday trails and view Gemini productivity trends"
             >
-              <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+              <BarChart3 className="w-3.5 h-3.5 text-stone-600" />
               <span>Daily Trends</span>
             </button>
           )}

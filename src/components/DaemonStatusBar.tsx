@@ -23,6 +23,7 @@ interface DaemonStatusBarProps {
   onOpenAudit: () => void;
   onOpenDailySummary?: () => void;
   onOpenMasterCombine?: () => void;
+  onOpenProductivityInsights?: () => void;
 }
 
 export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
@@ -36,6 +37,7 @@ export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
   onOpenAudit,
   onOpenDailySummary,
   onOpenMasterCombine,
+  onOpenProductivityInsights,
 }) => {
   const readinessPercentage = totalCount > 0 
     ? Math.round((completedCount / totalCount) * 100) 
@@ -134,16 +136,28 @@ export const DaemonStatusBar: React.FC<DaemonStatusBarProps> = ({
             <span className="text-[11px] text-emerald-600 font-medium">
               Zero loose ends
             </span>
-            {completedCount > 0 && onOpenDailySummary && (
-              <button
-                type="button"
-                onClick={onOpenDailySummary}
-                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-0.5"
-              >
-                <span>Daily Trends</span>
-                <ArrowRight className="w-2.5 h-2.5" />
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {onOpenProductivityInsights && (
+                <button
+                  type="button"
+                  onClick={onOpenProductivityInsights}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium hover:underline flex items-center gap-0.5"
+                >
+                  <span>Insights</span>
+                  <ArrowRight className="w-2.5 h-2.5" />
+                </button>
+              )}
+              {completedCount > 0 && onOpenDailySummary && (
+                <button
+                  type="button"
+                  onClick={onOpenDailySummary}
+                  className="text-[11px] text-stone-500 hover:text-stone-800 font-medium hover:underline flex items-center gap-0.5"
+                >
+                  <span>Trends</span>
+                  <ArrowRight className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

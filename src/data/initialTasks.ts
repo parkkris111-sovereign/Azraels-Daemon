@@ -9,6 +9,8 @@ const RAW_INITIAL_TASKS: IncompleteTask[] = [
     priority: 'high',
     sourceTrail: 'Gmail Drafts • Active tab left at 15:42 PM',
     currentProgress: 75,
+    estimatedMinutes: 15,
+    dependencies: [],
     serviceId: 'gmail',
     emailAccountId: 'email-gmail-primary',
     predefinedActions: [
@@ -49,6 +51,8 @@ The billing pipeline refactor is mostly done, but we ran into an edge case with 
     priority: 'high',
     sourceTrail: 'JupyterLab / Colab • Kernel active on Localhost:8888',
     currentProgress: 45,
+    estimatedMinutes: 35,
+    dependencies: [],
     serviceId: 'jupyter',
     emailAccountId: 'email-research-labs',
     notebookData: {
@@ -117,6 +121,8 @@ The billing pipeline refactor is mostly done, but we ran into an edge case with 
     priority: 'medium',
     sourceTrail: 'Trello API • Card "AWS Storage Tiering" in Sprint 42',
     currentProgress: 65,
+    estimatedMinutes: 20,
+    dependencies: [],
     serviceId: 'trello',
     emailAccountId: 'email-work-solutions',
     predefinedActions: [
@@ -167,6 +173,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "analytics_lifecycle" {
     priority: 'high',
     sourceTrail: 'Asana • Task in "Enterprise Onboarding & SRE" (Assigned to Kris)',
     currentProgress: 80,
+    estimatedMinutes: 12,
+    dependencies: ['trail-101'], // Blocked by Q3 Stakeholder Update & Delivery Timeline
     serviceId: 'asana',
     emailAccountId: 'email-work-solutions',
     predefinedActions: [
@@ -209,6 +217,8 @@ No customer data or transaction records were corrupted.
     priority: 'low',
     sourceTrail: 'Google Docs & Drive • Doc "Offsite_Q4_Plan" blurred at 14:05 PM',
     currentProgress: 60,
+    estimatedMinutes: 25,
+    dependencies: [],
     serviceId: 'google_drive',
     emailAccountId: 'email-gmail-primary',
     predefinedActions: [
@@ -260,6 +270,8 @@ Budget estimate so far:
     priority: 'medium',
     sourceTrail: 'Outlook & Concur • Receipt email draft unsent at 12:30 PM',
     currentProgress: 35,
+    estimatedMinutes: 18,
+    dependencies: [],
     serviceId: 'outlook',
     emailAccountId: 'email-outlook-personal',
     predefinedActions: [
@@ -293,6 +305,48 @@ Missing:
 - Total aggregation and signature statement`,
     userNotes: 'Cost center is ENG-402 (Solutions Engineering). Dinner covered contract renewal negotiation. Send from my Outlook account.',
     detectedAt: 'Today, 12:30',
+    status: 'pending',
+  },
+  {
+    id: 'trail-108',
+    title: 'Google Keep Note: Mobile App Architecture & Offline Sync Checklist',
+    category: 'document',
+    priority: 'high',
+    sourceTrail: 'Google Keep • Pinned Note "Mobile Arch & SQLite"',
+    currentProgress: 55,
+    estimatedMinutes: 20,
+    dependencies: ['trail-107'], // Blocked by Trello Infrastructure Card
+    serviceId: 'google_keep',
+    emailAccountId: 'email-gmail-primary',
+    predefinedActions: [
+      {
+        id: 'act-108-1',
+        serviceId: 'google_keep',
+        name: 'Sync Completed Note & Check All Items',
+        description: 'Updates Google Keep note with completed offline sync protocol and checks remaining items.',
+        iconName: 'FileText',
+        targetEntity: 'Google Keep: "Mobile Arch & SQLite" (krissmgusa@gmail.com)',
+        status: 'pending',
+      },
+      {
+        id: 'act-108-2',
+        serviceId: 'google_drive',
+        name: 'Backup Keep Note to Drive Archive',
+        description: 'Archives JSON/Markdown copy to Google Drive /Notes_Archive/.',
+        iconName: 'HardDrive',
+        targetEntity: 'Google Drive: /Google_Keep_Archive/2026/',
+        status: 'pending',
+      },
+    ],
+    originalContent: `# Google Keep Note: Mobile Arch & SQLite Sync
+Checklist left partially completed:
+[x] Define SQLite local schema for offline task cache
+[x] Implement optimistic UI update on user gesture
+[ ] Complete bidirectional conflict resolution (server timestamp vs client vector clock)
+[ ] Add retry backoff for flaky cellular connections (exponential up to 60s)
+[ ] Draft executive sync summary note in Google Keep for mobile lead`,
+    userNotes: 'Ensure SQLite sync handles 409 conflict gracefully and update Keep note directly.',
+    detectedAt: 'Today, 18:15',
     status: 'pending',
   },
 ];
