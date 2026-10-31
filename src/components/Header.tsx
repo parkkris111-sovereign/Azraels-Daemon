@@ -16,10 +16,14 @@ import {
   HardDrive,
   Zap,
   TrendingUp,
-  FileText
+  FileText,
+  Target,
+  Check,
+  Trophy
 } from 'lucide-react';
 import { formatCountdownToBedtime } from '../utils/time';
 import { sounds } from '../utils/audio';
+import { DailyGoalModal } from './DailyGoalModal';
 
 interface HeaderProps {
   bedtime: string;
@@ -37,6 +41,8 @@ interface HeaderProps {
   isSweeping: boolean;
   pendingCount: number;
   completedCount: number;
+  dailyGoal?: number;
+  onDailyGoalChange?: (newGoal: number) => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
   onOpenAudit: () => void;
@@ -59,6 +65,8 @@ export const Header: React.FC<HeaderProps> = ({
   isSweeping,
   pendingCount,
   completedCount,
+  dailyGoal = 5,
+  onDailyGoalChange,
   soundEnabled,
   onToggleSound,
   onOpenAudit,
@@ -66,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [countdown, setCountdown] = useState(formatCountdownToBedtime(bedtime));
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -76,6 +85,14 @@ export const Header: React.FC<HeaderProps> = ({
   }, [bedtime]);
 
   const allClear = pendingCount === 0 && completedCount > 0;
+
+  // Daily Goal Progress Ring Geometry
+  const safeDailyGoal = Math.max(1, dailyGoal);
+  const goalPercent = Math.min(100, Math.round((completedCount / safeDailyGoal) * 100));
+  const isGoalReached = completedCount >= safeDailyGoal;
+  const ringRadius = 14;
+  const ringCircumference = 2 * Math.PI * ringRadius; // ~87.96
+  const ringStrokeDashoffset = ringCircumference - (goalPercent / 100) * ringCircumference;
 
   return (
     <header className="border-b border-stone-200 bg-white/95 backdrop-blur sticky top-0 z-30 transition-all">
@@ -111,22 +128,99 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Center: 24/7 All-Day Operation Indicator (No Sleep) */}
-        <div className="flex items-center gap-2.5 bg-stone-900 text-stone-100 border border-stone-800 px-3.5 py-1.5 rounded-lg text-xs self-start md:self-auto shadow-2xs">
-          <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-white tracking-wide">
-              24/7 All-Day Mode
-            </span>
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              No Sleep • Always On
+        {/* Center: 24/7 All-Day Operation Indicator & Daily Goal Progress Ring */}
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap self-start md:self-auto">
+          {/* 24/7 All-Day Mode (No Sleep) */}
+          <div className="flex items-center gap-2.5 bg-stone-900 text-stone-100 border border-stone-800 px-3.5 py-1.5 rounded-xl text-xs shadow-2xs">
+            <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-white tracking-wide">
+                24/7 All-Day Mode
+              </span>
+              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                No Sleep • Always On
+              </span>
+            </div>
+            <span className="hidden xl:inline text-stone-700">|</span>
+            <span className="hidden xl:flex font-mono text-stone-300 text-[11px] items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-stone-400" />
+              Continuous Patrol
             </span>
           </div>
-          <span className="text-stone-700">|</span>
-          <span className="font-mono text-stone-300 text-[11px] flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-stone-400" />
-            Continuous Patrol Active
-          </span>
+
+          {/* Daily Goal Setting & Circular Progress Ring */}
+          <button
+            type="button"
+            onClick={() => setIsGoalModalOpen(true)}
+            className={`group flex items-center gap-2.5 px-3 py-1.5 rounded-xl border text-xs transition-all cursor-pointer shadow-2xs select-none ${
+              isGoalReached
+                ? 'bg-emerald-50/90 border-emerald-300 hover:bg-emerald-100/90 text-emerald-950 ring-1 ring-emerald-400/50'
+                : 'bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50 text-stone-800'
+            }`}
+            title={`Daily Target: ${completedCount} of ${safeDailyGoal} tasks completed (${goalPercent}%). Click to set daily goal.`}
+          >
+            {/* SVG Circular Progress Ring */}
+            <div className="relative flex items-center justify-center w-8 h-8 shrink-0">
+              <svg className="w-8 h-8 -rotate-90 transform" viewBox="0 0 36 36">
+                {/* Background Ring Track */}
+                <circle
+                  cx="18"
+                  cy="18"
+                  r={ringRadius}
+                  strokeWidth="3.5"
+                  fill="transparent"
+                  className={isGoalReached ? 'stroke-emerald-200' : 'stroke-stone-200'}
+                />
+                {/* Dynamic Progress Ring */}
+                <circle
+                  cx="18"
+                  cy="18"
+                  r={ringRadius}
+                  strokeWidth="3.5"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringStrokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  className={`transition-all duration-500 ease-out ${
+                    isGoalReached ? 'stroke-emerald-500' : 'stroke-indigo-600'
+                  }`}
+                />
+              </svg>
+
+              {/* Center percentage or checkmark */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                {isGoalReached ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                ) : (
+                  <span className="text-[9px] font-bold font-mono text-stone-700">
+                    {goalPercent}%
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Label and Goal count */}
+            <div className="text-left leading-tight">
+              <div className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-stone-500 group-hover:text-stone-800 transition-colors">
+                <Target className="w-3 h-3 text-emerald-600 shrink-0" />
+                <span>Daily Goal</span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="font-bold font-mono text-stone-900 text-xs">
+                  {completedCount}/{safeDailyGoal}
+                </span>
+                {isGoalReached ? (
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-200/80 px-1 py-0.5 rounded">
+                    Met! 🎯
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-stone-500 font-medium">
+                    done
+                  </span>
+                )}
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* Right: Actions */}
@@ -266,6 +360,20 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Daily Goal Setting Modal */}
+      <DailyGoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        dailyGoal={safeDailyGoal}
+        completedCount={completedCount}
+        totalCount={completedCount + pendingCount}
+        onSaveGoal={(newGoal) => {
+          if (onDailyGoalChange) {
+            onDailyGoalChange(newGoal);
+          }
+        }}
+      />
     </header>
   );
 };

@@ -46,6 +46,7 @@ const STORAGE_KEY_BEDTIME = 'integrator_daemon_bedtime_v1';
 const STORAGE_KEY_SOUND = 'integrator_daemon_sound_v1';
 const STORAGE_KEY_EMAILS = 'integrator_daemon_emails_v1';
 const STORAGE_KEY_SERVICES = 'integrator_daemon_services_v1';
+const STORAGE_KEY_DAILY_GOAL = 'integrator_daemon_daily_goal_v1';
 
 export default function App() {
   // Load tasks
@@ -104,6 +105,19 @@ export default function App() {
       return saved !== null ? saved === 'true' : true;
     }
     return true;
+  });
+
+  const [dailyGoal, setDailyGoal] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_DAILY_GOAL);
+        if (saved) {
+          const val = parseInt(saved, 10);
+          if (!isNaN(val) && val > 0) return val;
+        }
+      } catch {}
+    }
+    return 5;
   });
 
   // UI state
@@ -203,6 +217,17 @@ export default function App() {
     };
     setLogs((prev) => [newLog, ...prev.slice(0, 49)]);
     setActiveLog(message);
+  };
+
+  const handleDailyGoalChange = (newGoal: number) => {
+    const valid = Math.max(1, Math.min(100, newGoal));
+    setDailyGoal(valid);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY_DAILY_GOAL, valid.toString());
+      } catch {}
+    }
+    addLog('daemon', `Daily completed tasks target updated to ${valid} tasks.`);
   };
 
   const handleImportKeepNoteAsTask = (note: GoogleKeepNote) => {
@@ -613,6 +638,8 @@ export default function App() {
         isSweeping={isSweeping}
         pendingCount={pendingCount}
         completedCount={completedCount}
+        dailyGoal={dailyGoal}
+        onDailyGoalChange={handleDailyGoalChange}
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         onOpenAudit={() => setIsAuditOpen(true)}
