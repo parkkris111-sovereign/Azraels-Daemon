@@ -1,0 +1,23 @@
+[Unit]
+Description=Azrael 24/7 Sovereign Integrator & Telemetry Daemon
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=notify
+WatchdogSec=30s
+Restart=always
+RestartSec=5s
+ExecStart=/usr/bin/docker run --rm --name azrael-daemon \
+  --network host \
+  -v /tmp/sts_sovereign_engine.sock:/tmp/sts_sovereign_engine.sock \
+  -v /var/log/azrael:/var/log/azrael \
+  azrael-daemon:latest
+ExecStop=/usr/bin/docker stop azrael-daemon
+
+# Resource bounding (cgroups v2)
+MemoryMax=1G
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
