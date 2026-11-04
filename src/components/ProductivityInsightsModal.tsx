@@ -20,6 +20,7 @@ interface ProductivityInsightsModalProps {
   tasks: IncompleteTask[];
   report?: DailySummaryReport | null;
   bedtime?: string;
+  onUpdateBedtime?: (newBedtime: string) => void;
   onInspectTask?: (task: IncompleteTask) => void;
 }
 
@@ -29,6 +30,7 @@ export const ProductivityInsightsModal: React.FC<ProductivityInsightsModalProps>
   tasks,
   report,
   bedtime = '23:00',
+  onUpdateBedtime,
   onInspectTask,
 }) => {
   if (!isOpen) return null;
@@ -102,6 +104,7 @@ export const ProductivityInsightsModal: React.FC<ProductivityInsightsModalProps>
             tasks={tasks}
             report={report}
             bedtime={bedtime}
+            onUpdateBedtime={onUpdateBedtime}
           />
         </div>
 

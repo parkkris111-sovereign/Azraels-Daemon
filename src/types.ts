@@ -299,6 +299,7 @@ export interface PredictiveBedtimeRecommendation {
     sevenDayCompletionRatePct: number;
     circadianOptimalBedtime: string;
     delayFrequencyPct: number;
+    avgDailyCompletionHour?: string;
   };
   
   // Rationale & Scientific Circadian Guidance
@@ -307,4 +308,9 @@ export interface PredictiveBedtimeRecommendation {
   rationalePoints: string[];
   arcOfChangeRecommendations: string[];
   modeUsed?: 'ai' | 'deterministic';
+
+  // Productivity Insights Predictive Scheduling Fields
+  avgDailyTaskCompletionMinutes?: number;
+  projectedQueueFinishTime?: string;
+  insightsSourceSummary?: string;
 }

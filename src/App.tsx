@@ -640,6 +640,7 @@ export default function App() {
         completedCount={completedCount}
         dailyGoal={dailyGoal}
         onDailyGoalChange={handleDailyGoalChange}
+        tasks={tasks}
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
         onOpenAudit={() => setIsAuditOpen(true)}
@@ -911,6 +912,7 @@ export default function App() {
         onClose={() => setIsProductivityInsightsOpen(false)}
         tasks={tasks}
         bedtime={bedtime}
+        onUpdateBedtime={handleBedtimeChange}
         onInspectTask={(task) => {
           setIsProductivityInsightsOpen(false);
           setSelectedTask(task);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, 
   Moon, 
@@ -23,7 +23,10 @@ import {
 } from 'lucide-react';
 import { formatCountdownToBedtime } from '../utils/time';
 import { sounds } from '../utils/audio';
+import { IncompleteTask, DailySummaryReport } from '../types';
+import { calculatePredictiveBedtime } from '../utils/predictiveScheduling';
 import { DailyGoalModal } from './DailyGoalModal';
+import { PredictiveSchedulingModal } from './PredictiveSchedulingModal';
 
 interface HeaderProps {
   bedtime: string;
@@ -43,6 +46,8 @@ interface HeaderProps {
   completedCount: number;
   dailyGoal?: number;
   onDailyGoalChange?: (newGoal: number) => void;
+  tasks?: IncompleteTask[];
+  report?: DailySummaryReport | null;
   soundEnabled: boolean;
   onToggleSound: () => void;
   onOpenAudit: () => void;
@@ -67,6 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
   completedCount,
   dailyGoal = 5,
   onDailyGoalChange,
+  tasks = [],
+  report,
   soundEnabled,
   onToggleSound,
   onOpenAudit,
@@ -75,6 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [countdown, setCountdown] = useState(formatCountdownToBedtime(bedtime));
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [isPredictiveModalOpen, setIsPredictiveModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -93,6 +101,15 @@ export const Header: React.FC<HeaderProps> = ({
   const ringRadius = 14;
   const ringCircumference = 2 * Math.PI * ringRadius; // ~87.96
   const ringStrokeDashoffset = ringCircumference - (goalPercent / 100) * ringCircumference;
+
+  // Predictive Bedtime Recommendation derived from average task completion velocity
+  const predRec = useMemo(() => {
+    return calculatePredictiveBedtime({
+      tasks: tasks || [],
+      currentBedtime: bedtime,
+      report,
+    });
+  }, [tasks, bedtime, report]);
 
   return (
     <header className="border-b border-stone-200 bg-white/95 backdrop-blur sticky top-0 z-30 transition-all">
@@ -216,6 +233,49 @@ export const Header: React.FC<HeaderProps> = ({
                 ) : (
                   <span className="text-[10px] text-stone-500 font-medium">
                     done
+                  </span>
+                )}
+              </div>
+            </div>
+          </button>
+
+          {/* Bedtime & Predictive Scheduling Button */}
+          <button
+            type="button"
+            onClick={() => setIsPredictiveModalOpen(true)}
+            className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs transition-all cursor-pointer shadow-2xs select-none ${
+              predRec.differenceMinutes !== 0
+                ? 'bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100/80 text-indigo-950 ring-1 ring-indigo-300/40'
+                : 'bg-white border-stone-200 hover:border-stone-300 hover:bg-stone-50 text-stone-800'
+            }`}
+            title={`Predictive Scheduling: Target ${bedtime} (Optimal suggested: ${predRec.suggestedBedtime} based on ${predRec.avgDailyTaskCompletionMinutes ?? 16.8}m avg completion time). Click to inspect & apply.`}
+          >
+            <div className="w-8 h-8 rounded-lg bg-indigo-100/70 text-indigo-700 flex items-center justify-center shrink-0">
+              <Moon className="w-4 h-4" />
+            </div>
+
+            <div className="text-left leading-tight">
+              <div className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-stone-500 group-hover:text-stone-800 transition-colors">
+                <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                <span>Bedtime</span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="font-bold font-mono text-stone-900 text-xs">
+                  {bedtime}
+                </span>
+                {predRec.differenceMinutes !== 0 ? (
+                  <span
+                    className={`text-[10px] font-bold font-mono px-1 py-0.2 rounded border ${
+                      predRec.differenceMinutes < 0
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : 'bg-amber-100 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    Opt: {predRec.suggestedBedtime}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1 rounded">
+                    optimal
                   </span>
                 )}
               </div>
@@ -373,6 +433,16 @@ export const Header: React.FC<HeaderProps> = ({
             onDailyGoalChange(newGoal);
           }
         }}
+      />
+
+      {/* Predictive Scheduling Modal */}
+      <PredictiveSchedulingModal
+        isOpen={isPredictiveModalOpen}
+        onClose={() => setIsPredictiveModalOpen(false)}
+        tasks={tasks || []}
+        currentBedtime={bedtime}
+        onUpdateBedtime={onBedtimeChange}
+        report={report}
       />
     </header>
   );

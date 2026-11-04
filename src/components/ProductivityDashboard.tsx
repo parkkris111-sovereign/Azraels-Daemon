@@ -28,8 +28,11 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Activity,
+  Check,
 } from 'lucide-react';
 import { IncompleteTask, DailySummaryReport } from '../types';
+import { calculatePredictiveBedtime } from '../utils/predictiveScheduling';
+import { sounds } from '../utils/audio';
 
 export interface DayProductivityData {
   dayLabel: string; // e.g. "Thu", "Fri", "Today"
@@ -54,15 +57,23 @@ interface ProductivityDashboardProps {
   tasks: IncompleteTask[];
   report?: DailySummaryReport | null;
   bedtime?: string;
+  onUpdateBedtime?: (newBedtime: string) => void;
 }
 
 export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
   tasks,
   report,
   bedtime = '23:00',
+  onUpdateBedtime,
 }) => {
   const [activeChartMode, setActiveChartMode] = useState<'combined' | 'velocity' | 'peace' | 'categories'>('combined');
   const [selectedDay, setSelectedDay] = useState<DayProductivityData | null>(null);
+  const [justAppliedBedtime, setJustAppliedBedtime] = useState(false);
+
+  // Derive predictive bedtime recommendation from 7-day productivity insights
+  const predRec = useMemo(() => {
+    return calculatePredictiveBedtime({ tasks, currentBedtime: bedtime, report });
+  }, [tasks, bedtime, report]);
 
   // Derive 7-Day Trend data anchored to actual current tasks
   const weekData = useMemo<DayProductivityData[]>(() => {
@@ -333,6 +344,96 @@ export const ProductivityDashboard: React.FC<ProductivityDashboardProps> = ({
           <span className="text-[10px] text-stone-400 mt-0.5 block">
             Bedtime readiness target {bedtime}
           </span>
+        </div>
+      </div>
+
+      {/* Predictive Scheduling & Optimal Bedtime Card */}
+      <div className="bg-gradient-to-r from-stone-900 via-indigo-950 to-stone-900 text-white rounded-xl p-4 sm:p-5 border border-indigo-900/60 shadow-md">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 shrink-0 mt-0.5">
+              <Moon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/25 text-indigo-300 border border-indigo-500/40">
+                  Predictive Scheduling Logic
+                </span>
+                {predRec.differenceMinutes !== 0 ? (
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                      predRec.differenceMinutes < 0
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    }`}
+                  >
+                    {predRec.differenceMinutes < 0
+                      ? `${Math.abs(predRec.differenceMinutes)}m earlier recommended`
+                      : `+${predRec.differenceMinutes}m buffer recommended`}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Bedtime Aligned with Velocity
+                  </span>
+                )}
+              </div>
+
+              <h3 className="text-base font-bold text-white mt-1 flex items-baseline gap-2 flex-wrap">
+                <span>Optimal Suggested Bedtime:</span>
+                <span className="font-mono text-emerald-400 text-xl font-extrabold">{predRec.suggestedBedtime}</span>
+                <span className="text-xs font-normal text-stone-300">
+                  (Current configured target: {bedtime})
+                </span>
+              </h3>
+
+              <p className="text-xs text-stone-300 mt-1 max-w-2xl leading-relaxed">
+                Based on your 7-day productivity insights, your average daily task completion time is{' '}
+                <strong className="text-white font-mono">{predRec.avgDailyTaskCompletionMinutes ?? 16.8} mins / task</strong> across {aggregates.totalCompleted} resolved threads.
+                With {tasks.filter(t => t.status !== 'completed').length} pending item(s), full queue clearance is projected by{' '}
+                <strong className="text-indigo-300 font-mono">{predRec.projectedQueueFinishTime ?? '21:45'}</strong> + a {predRec.windDownMinutes}m circadian wind-down.
+              </p>
+            </div>
+          </div>
+
+          {/* Action to Apply */}
+          <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
+            {onUpdateBedtime && (
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdateBedtime(predRec.suggestedBedtime);
+                  sounds.playTaskFinished();
+                  setJustAppliedBedtime(true);
+                  setTimeout(() => setJustAppliedBedtime(false), 3000);
+                }}
+                disabled={predRec.suggestedBedtime === bedtime && !justAppliedBedtime}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                  justAppliedBedtime
+                    ? 'bg-emerald-600 text-white'
+                    : predRec.suggestedBedtime === bedtime
+                    ? 'bg-stone-800 text-stone-400 border border-stone-700 cursor-default'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                }`}
+              >
+                {justAppliedBedtime ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Bedtime Applied!</span>
+                  </>
+                ) : predRec.suggestedBedtime === bedtime ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Bedtime Optimized</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Apply Bedtime ({predRec.suggestedBedtime})</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
